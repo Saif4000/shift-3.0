@@ -136,8 +136,10 @@ const SOURCES = [
   // ---- US Federal Government (US GOV tab) ----
   { id: 'wh',        name: 'White House',     url: 'https://www.whitehouse.gov/feed/',                                                                                                              region: 'US-GOV', lang: 'en' },
   { id: 'wh-news',   name: 'WH via news',     url: 'https://news.google.com/rss/search?q=site:whitehouse.gov+OR+%22White+House%22+statement&when:1d&hl=en-US&gl=US&ceid=US:en',                       region: 'US-GOV', lang: 'en' },
-  // Note: rollcall.com/factbase/* and factba.se/* feeds are paywalled (all
-  // return 'Protected: Factbase Latest' placeholders). Workarounds below.
+  // Factbase content site is paywalled BUT their CDN at media-cdn.factba.se
+  // publishes the full Trump calendar as public JSON. We proxy that through
+  // /api/factbase which converts it to RSS so parseRSS can consume it.
+  { id: 'fb-cdn',    name: 'Factbase Calendar (CDN)',   url: '/api/factbase',                                                                                                                          region: 'US-GOV', lang: 'en' },
   { id: 'rc-main',   name: 'Roll Call (main)',          url: 'https://rollcall.com/feed/',                                                                                                             region: 'US-GOV', lang: 'en' },
   { id: 'fb-news',   name: 'Factbase via news',         url: 'https://news.google.com/rss/search?q=site:rollcall.com/factbase+OR+site:factba.se&when:3d&hl=en-US&gl=US&ceid=US:en',                     region: 'US-GOV', lang: 'en' },
   { id: 'potus-sch', name: 'POTUS Schedule (news)',     url: 'https://news.google.com/rss/search?q=%22Trump+schedule%22+OR+%22White+House+schedule%22+OR+%22President%27s+schedule%22&when:1d&hl=en-US&gl=US&ceid=US:en', region: 'US-GOV', lang: 'en' },
@@ -575,16 +577,23 @@ async function translate(text, from = 'ar', to = 'en') {
 async function fetchSource(src) {
   state.sourceStatus[src.id] = { status: 'wait', count: 0, name: src.name };
   try {
-    // 1) Server-side /api/news (browser UA, edge-cached) — most reliable
     let text = '';
-    try {
-      const r = await fetchTimeout(`/api/news?url=${encodeURIComponent(src.url)}`, {}, 9000);
+    // Same-origin /api/ endpoints (e.g. /api/factbase) return RSS already —
+    // fetch them directly, no need to round-trip through /api/news.
+    if (src.url.startsWith('/api/')) {
+      const r = await fetchTimeout(src.url, {}, 9000);
       if (r.ok) text = await r.text();
-    } catch {}
-    // 2) Public-proxy fallback (only if server-side returned nothing)
-    if (!text || text.length < 80) {
-      const r = await proxyFetch(src.url);
-      text = await r.text();
+    } else {
+      // 1) Server-side /api/news (browser UA, edge-cached) — most reliable
+      try {
+        const r = await fetchTimeout(`/api/news?url=${encodeURIComponent(src.url)}`, {}, 9000);
+        if (r.ok) text = await r.text();
+      } catch {}
+      // 2) Public-proxy fallback (only if server-side returned nothing)
+      if (!text || text.length < 80) {
+        const r = await proxyFetch(src.url);
+        text = await r.text();
+      }
     }
     const cap = getItemsPerSource();
     let items = parseRSS(text, src).slice(0, cap);
@@ -2430,7 +2439,7 @@ function isUaeGovItem(it) {
 /* Sources that belong to the US GOV tab — federal exec branch + Congress */
 const US_GOV_SOURCE_IDS = new Set([
   'wh', 'wh-news',
-  'rc-main', 'fb-news', 'potus-sch', 'politico',
+  'fb-cdn', 'rc-main', 'fb-news', 'potus-sch', 'politico',
   'dos', 'dos-pr',
   'dow',
   'doe', 'doe-news',
@@ -2442,7 +2451,7 @@ const US_GOV_SOURCE_IDS = new Set([
 /* US GOV sub-tabs — drill down by department. Rendered as a chip strip
  * at the top of the us-gov view; click swaps the filter. */
 const US_GOV_SUBTABS = [
-  { id: 'potus',    label: 'POTUS',     sources: ['potus-sch', 'politico', 'fb-news'] },
+  { id: 'potus',    label: 'POTUS',     sources: ['fb-cdn', 'potus-sch', 'politico'] },
   { id: 'wh',       label: 'WH',        sources: ['wh', 'wh-news', 'rc-main'] },
   { id: 'congress', label: 'CONGRESS',  sources: ['senate-rc', 'house-rc'] },
   { id: 'state',    label: 'DOS',       sources: ['dos', 'dos-pr'] },

@@ -34,6 +34,7 @@ export default async function handler(request) {
     `${origin}/api/aircraft?preset=uae`,
     `${origin}/api/aircraft?preset=hormuz`,
     `${origin}/api/aircraft?preset=mena`,
+    `${origin}/api/factbase`,
   ];
 
   const t0 = Date.now();
