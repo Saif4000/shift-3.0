@@ -383,7 +383,7 @@ const state = {
   modalItem: null,
   modalList: [],
   modalIdx: 0,
-  usGovSubtab: 'rollcall',
+  usGovSubtab: 'potus',
 };
 
 /* ===== Hydrate from localStorage immediately so first paint shows data ===== */
@@ -2440,15 +2440,14 @@ const US_GOV_SOURCE_IDS = new Set([
 /* US GOV sub-tabs — drill down by department. Rendered as a chip strip
  * at the top of the us-gov view; click swaps the filter. */
 const US_GOV_SUBTABS = [
-  { id: 'rollcall', label: 'ROLL CALL',          sources: ['senate-rc', 'house-rc'] },
-  { id: 'trump',    label: 'TRUMP TRACKER',      sources: ['fb-cal', 'fb-news', 'trump-cal', 'trump-ts'] },
-  { id: 'wh',       label: 'WHITE HOUSE',        sources: ['wh', 'wh-news'] },
-  { id: 'state',    label: 'STATE · DOS',        sources: ['dos', 'dos-pr'] },
-  { id: 'war',      label: 'WAR · DOD',          sources: ['dow'] },
-  { id: 'energy',   label: 'ENERGY · DOE',       sources: ['doe', 'doe-news'] },
-  { id: 'justice',  label: 'JUSTICE · DOJ',      sources: ['doj', 'doj-news'] },
-  { id: 'treasury', label: 'TREASURY · OFAC',    sources: ['treasury', 'treas-news', 'ofac'] },
-  { id: 'all',      label: 'ALL US-GOV',         sources: null }, // null = full set
+  { id: 'potus',    label: 'POTUS',               sources: ['wh', 'wh-news', 'trump-ts', 'trump-cal', 'fb-cal', 'fb-news'] },
+  { id: 'congress', label: 'CONGRESS',            sources: ['senate-rc', 'house-rc'] },
+  { id: 'state',    label: 'STATE · DOS',         sources: ['dos', 'dos-pr'] },
+  { id: 'war',      label: 'WAR · DOD',           sources: ['dow'] },
+  { id: 'energy',   label: 'ENERGY · DOE',        sources: ['doe', 'doe-news'] },
+  { id: 'justice',  label: 'JUSTICE · DOJ',       sources: ['doj', 'doj-news'] },
+  { id: 'treasury', label: 'TREASURY · OFAC',     sources: ['treasury', 'treas-news', 'ofac'] },
+  { id: 'all',      label: 'ALL US-GOV',          sources: null },
 ];
 function isUsGovItem(it) {
   if (!it) return false;
@@ -2583,7 +2582,7 @@ function renderContent() {
     items = items.filter(isUaeGovItem);
   } else if (activeTab === 'us-gov') {
     // Render department sub-tab strip + filter by the active sub-tab
-    const subId = state.usGovSubtab || 'rollcall';
+    const subId = state.usGovSubtab || 'potus';
     const sub = US_GOV_SUBTABS.find((s) => s.id === subId) || US_GOV_SUBTABS[0];
     const set = sub.sources ? new Set(sub.sources) : null;
     items = items.filter((it) => set ? set.has(it.sourceId) : isUsGovItem(it));
