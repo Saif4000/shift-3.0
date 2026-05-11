@@ -98,7 +98,7 @@
   </div>
 
   <div class="threat-watch" id="threat-watch">
-    <span class="tw-tag">▮ THREAT WATCH · UAE</span>
+    <span class="tw-tag">▮ MoI THREAT WATCH</span>
     <span class="tw-cell"><b>DRONES</b><span id="tw-drone">0</span><span class="tw-delta" id="tw-drone-d">▬</span></span>
     <span class="tw-cell"><b>BAL MSL</b><span id="tw-ballistic">0</span><span class="tw-delta" id="tw-ballistic-d">▬</span></span>
     <span class="tw-cell"><b>CRUISE</b><span id="tw-cruise">0</span><span class="tw-delta" id="tw-cruise-d">▬</span></span>
@@ -132,9 +132,6 @@
 
   <nav class="tabs" id="tabs">
     <button class="tab active" data-tab="all">ALL</button>
-    <button class="tab" data-tab="uae-gov">UAE GOV</button>
-    <button class="tab" data-tab="live">LIVE</button>
-    <button class="tab" data-tab="map">MAP</button>
     <button class="tab" data-tab="security">SECURITY</button>
     <button class="tab" data-tab="politics">POLITICS</button>
     <button class="tab" data-tab="economy">ECONOMY</button>
@@ -142,6 +139,10 @@
     <button class="tab" data-tab="markets">MARKETS</button>
     <button class="tab" data-tab="tensions">TENSIONS</button>
     <button class="tab" data-tab="sources">SOURCES</button>
+    <button class="tab" data-tab="uae-gov">UAE GOV</button>
+    <button class="tab" data-tab="marine">MARINE</button>
+    <button class="tab" data-tab="live">LIVE</button>
+    <button class="tab" data-tab="map">MAP</button>
   </nav>
 </header>
 
@@ -198,6 +199,18 @@
     </div>
     <div class="notam-list" id="notam-list">
       <div class="empty">Loading NOTAMs…</div>
+    </div>
+  </section>
+
+  <section class="marine-view" id="marine-view" hidden>
+    <div class="section-head">
+      MARINE TRAFFIC — GULF / HORMUZ / RED SEA
+      <span class="sub">MarineTraffic · live AIS · click any vessel</span>
+    </div>
+    <div class="marine-tab-wrap">
+      <iframe class="marine-tab-frame" id="marine-tab-frame"
+              loading="lazy"
+              referrerpolicy="no-referrer-when-downgrade"></iframe>
     </div>
   </section>
 

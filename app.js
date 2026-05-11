@@ -1161,6 +1161,9 @@ function initMapOnce() {
   });
 
   // ---- Periodic refresh, only while MAP tab visible ----
+  // Render whatever we already have cached from preload first, so the map
+  // shows planes immediately on first open.
+  if (state.aircraft && state.aircraft.length) renderAircraft();
   refreshMapData();
   if (aircraftTimer) clearInterval(aircraftTimer);
   aircraftTimer = setInterval(() => {
@@ -1724,8 +1727,8 @@ function moveFocus(delta) {
 /* ============================================================
  * KEYBOARD SHORTCUTS
  * ============================================================ */
-const TAB_ORDER = ['all','uae-gov','live','map','security','politics','economy','ai','markets','tensions','sources'];
-const TAB_LETTERS = { a: 'all', u: 'uae-gov', l: 'live', v: 'map', s: 'security', p: 'politics', e: 'economy', i: 'ai', m: 'markets', t: 'tensions' };
+const TAB_ORDER = ['all','security','politics','economy','ai','markets','tensions','sources','uae-gov','marine','live','map'];
+const TAB_LETTERS = { a: 'all', s: 'security', p: 'politics', e: 'economy', i: 'ai', m: 'markets', t: 'tensions', u: 'uae-gov', n: 'marine', l: 'live', v: 'map' };
 
 /* Sources that belong to the UAE GOV tab (also matched by region prefix 'AE-') */
 const UAE_GOV_SOURCE_IDS = new Set([
@@ -1826,22 +1829,30 @@ function renderContent() {
   const mv = $('#map-view');
   const lv = $('#live-view');
 
+  const marineView = document.getElementById('marine-view');
+
   if (activeTab === 'map') {
-    c.hidden = true; lv.hidden = true; mv.hidden = false;
+    c.hidden = true; lv.hidden = true; if (marineView) marineView.hidden = true; mv.hidden = false;
     initMapOnce();
-    // Force Leaflet to recompute tile layout whenever the map view becomes
-    // visible — without this the container may have had 0 height during init
-    // and tiles never paint.
     setTimeout(() => { try { leafletMap?.invalidateSize(true); } catch {} }, 60);
     setTimeout(() => { try { leafletMap?.invalidateSize(true); } catch {} }, 300);
     return;
   }
   if (activeTab === 'live') {
-    c.hidden = true; mv.hidden = true; lv.hidden = false;
+    c.hidden = true; mv.hidden = true; if (marineView) marineView.hidden = true; lv.hidden = false;
     renderLive();
     return;
   }
-  mv.hidden = true; lv.hidden = true; c.hidden = false;
+  if (activeTab === 'marine') {
+    c.hidden = true; mv.hidden = true; lv.hidden = true; if (marineView) marineView.hidden = false;
+    const frame = document.getElementById('marine-tab-frame');
+    if (frame && !frame.dataset.loaded) {
+      frame.src = 'https://www.marinetraffic.com/en/ais/embed/zoom:7/centery:25.5/centerx:55.5/maptype:1/shownames:false/mmsi:0/shipid:0/fleet:/fleet_id:0/vtypes:/showmenu:false/remember:false';
+      frame.dataset.loaded = '1';
+    }
+    return;
+  }
+  mv.hidden = true; lv.hidden = true; if (marineView) marineView.hidden = true; c.hidden = false;
 
   if (state.searchActive) { renderSearch(); return; }
 
