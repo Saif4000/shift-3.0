@@ -547,11 +547,12 @@ async function fetchSource(src) {
       const r = await proxyFetch(src.url);
       text = await r.text();
     }
-    let items = parseRSS(text, src).slice(0, 15);
+    let items = parseRSS(text, src).slice(0, 40);
 
     if (src.lang === 'ar') {
-      // Translate first 6 headlines per source — stays well under daily limit
-      const toTr = items.slice(0, 6);
+      // Translate first 10 headlines per source — stays well under the 5000
+      // char/day MyMemory anon quota for Arabic-only sources
+      const toTr = items.slice(0, 10);
       await Promise.all(
         toTr.map(async (it) => {
           const en = await translate(it.title, 'ar', 'en');
@@ -584,7 +585,7 @@ function mergeAndDedupe(items) {
     out.push(it);
   }
   out.sort((a, b) => b.date - a.date);
-  return out.slice(0, 250);
+  return out.slice(0, 600);
 }
 
 /**
@@ -607,7 +608,7 @@ async function fetchAllNews() {
     }))
   );
   await Promise.allSettled(tasks);
-  cacheSet('news', state.items.slice(0, 200));
+  cacheSet('news', state.items.slice(0, 400));
   renderThreatWatch();
 }
 
@@ -1754,7 +1755,7 @@ function renderSearch() {
     </div>
     ${renderAIBlock()}
     <div class="section-head">CACHED FEED MATCHES <span class="sub">${local.length}</span></div>
-    ${local.length ? local.slice(0, 80).map(renderItem).join('') : '<div class="empty">No cached matches.</div>'}
+    ${local.length ? local.slice(0, 200).map(renderItem).join('') : '<div class="empty">No cached matches.</div>'}
     <div class="section-head">GDELT 2.0 — LIVE WEB QUERY · 2 DAYS <span class="sub">${state.searchGdelt.length}</span></div>
     ${state.searchGdelt.length ? state.searchGdelt.slice(0, 40).map((t, i) => `
       <article class="item" data-link="${escapeHtml(t.url)}" data-title="${escapeHtml(t.title)}" data-source="${escapeHtml(t.domain || '')}" data-time="${t.date.toISOString()}">
@@ -2057,9 +2058,9 @@ function renderContent() {
     return;
   }
 
-  c.innerHTML = items.slice(0, 150).map(renderItem).join('');
+  c.innerHTML = items.slice(0, 300).map(renderItem).join('');
   // Cache the rendered list for keyboard nav + modal next/prev
-  state.modalList = items.slice(0, 150);
+  state.modalList = items.slice(0, 300);
   state.focusedIdx = -1;
 }
 
