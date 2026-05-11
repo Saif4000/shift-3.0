@@ -231,29 +231,19 @@ const CHOKEPOINTS = [
  * Each channel's live stream is embedded directly; if it isn't live at a
  * given moment YouTube returns its standard "no current live stream" tile. */
 /**
- * LIVE roster — Bloomberg first, GCC/Mideast second, then global.
- * Using channel-live-stream embed URLs (not hardcoded video IDs) because the
- * IDs rotate every few months and break the embed. The channel URL always
- * picks up whatever the channel is currently streaming live.
+ * LIVE roster — user-curated. Uses channel-live-stream embed URLs (not
+ * hardcoded video IDs) because the IDs rotate every few months and break the
+ * embed. The channel URL always picks up whatever the channel is currently
+ * streaming live.
  */
 const LIVE_CHANNELS = [
-  // Bloomberg first (user request) — Bloomberg TV main channel
-  { channelId: 'UCIALMKvObZNtJ6AmdCLP7Lg', name: 'BLOOMBERG TV',   desk: 'NEW YORK · US' },
-  // GCC / Middle East
-  { channelId: 'UCNye-wNBqNL5ZzHSJj3l8Bg', name: 'AL JAZEERA EN',  desk: 'DOHA · QA' },
-  { channelId: 'UCsLcwjY6V1c0kdmAFwlNxgw', name: 'AL ARABIYA EN',  desk: 'DUBAI · AE' },
-  { channelId: 'UC68Mz_kS2dVCpYTtmiuwo3w', name: 'AL HADATH',      desk: 'RIYADH · SA (AR)' },
-  { channelId: 'UCfFR8Tt0nnnT-tQp3JEdh7g', name: 'I24 NEWS EN',    desk: 'TEL AVIV · IL' },
-  // EU + Turkey
-  { channelId: 'UCQfwfsi5VrQ8yKZ-UWmAEFg', name: 'FRANCE 24 EN',   desk: 'PARIS · FR' },
-  { channelId: 'UCoMdktPbSTixAyNGwb-UYkQ', name: 'SKY NEWS',       desk: 'LONDON · UK' },
-  { channelId: 'UCknLrEdhRCp1aegoMqRaCZg', name: 'DW NEWS',        desk: 'BERLIN · DE' },
-  { channelId: 'UC7fWeaHhqgM4Ry-RMpM2YYw', name: 'TRT WORLD',      desk: 'ISTANBUL · TR' },
-  // US
-  { channelId: 'UCBi2mrWuNuyYy4gbM6fU18Q', name: 'ABC NEWS LIVE',  desk: 'NEW YORK · US' },
-  { channelId: 'UCeY0bbntWzzVIaj2z3QigXg', name: 'NBC NEWS NOW',   desk: 'NEW YORK · US' },
-  // Asia
-  { channelId: 'UC_gUM8rL-Lrg6O3adPW9K1g', name: 'WION',           desk: 'NEW DELHI · IN' },
+  { channelId: 'UCIALMKvObZNtJ6AmdCLP7Lg', name: 'BLOOMBERG TV',     desk: 'NEW YORK · US' },
+  { channelId: 'UCNye-wNBqNL5ZzHSJj3l8Bg', name: 'AL JAZEERA EN',    desk: 'DOHA · QA' },
+  { channelId: 'UCQfwfsi5VrQ8yKZ-UWmAEFg', name: 'FRANCE 24 EN',     desk: 'PARIS · FR' },
+  { channelId: 'UCknLrEdhRCp1aegoMqRaCZg', name: 'DW NEWS',          desk: 'BERLIN · DE' },
+  { channelId: 'UC7fWeaHhqgM4Ry-RMpM2YYw', name: 'TRT WORLD',        desk: 'ISTANBUL · TR' },
+  { channelId: 'UCeY0bbntWzzVIaj2z3QigXg', name: 'NBC NEWS NOW',     desk: 'NEW YORK · US' },
+  { channelId: 'UCpVm7bg6pXKo1Pr6k5kxG9A', name: 'NAT GEO',          desk: 'WASHINGTON · US' },
 ];
 
 const LIVE_AUTO_LOAD = 4;
