@@ -159,9 +159,11 @@ export default async function handler(request) {
 function airlabsToOpenSky(a) {
   if (a.lat == null || a.lng == null) return null;
   const onGround = a.status === 'ground' || a.alt === 0;
+  // Prefer IATA callsign (e.g. EK723) over bare flight number (723)
+  const callsign = (a.flight_iata || a.flight_icao || a.reg_number || a.flight_number || '').toString().trim();
   return [
     a.hex || '',
-    (a.flight_number || a.flight_iata || '').trim(),
+    callsign,
     a.flag || '',
     null, null,
     a.lng, a.lat,
