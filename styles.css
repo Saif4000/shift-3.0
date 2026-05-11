@@ -1086,6 +1086,45 @@ body.fetching .dataflow {
 .airport-civil, .mil-base { background: none !important; border: none !important; }
 .airport-civil svg, .mil-base svg { filter: drop-shadow(0 0 2px rgba(0,0,0,0.85)); }
 
+/* Leaflet layer-control — terminal styling */
+.leaflet-control-layers {
+  background: rgba(0,0,0,0.88) !important;
+  border: 1px solid var(--amber-dim) !important;
+  border-radius: 0 !important;
+  color: var(--amber) !important;
+  font-family: var(--mono) !important;
+  font-size: 10px !important;
+  letter-spacing: 0.4px !important;
+  box-shadow: none !important;
+}
+.leaflet-control-layers-toggle {
+  background-image: none !important;
+  background-color: transparent !important;
+  width: 30px !important; height: 30px !important;
+  position: relative;
+}
+.leaflet-control-layers-toggle::before {
+  content: '☰ LYR';
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--amber);
+  font-family: var(--mono);
+  font-size: 9px; font-weight: 700;
+  letter-spacing: 0.6px;
+}
+.leaflet-control-layers-list { padding: 6px 8px !important; }
+.leaflet-control-layers label {
+  display: flex !important;
+  align-items: center; gap: 6px;
+  padding: 3px 0;
+  color: var(--white);
+  cursor: pointer;
+}
+.leaflet-control-layers-overlays input[type=checkbox] {
+  accent-color: var(--amber);
+}
+.leaflet-control-layers-separator { border-top-color: var(--border) !important; }
+
 /* Leaflet tooltip in terminal style */
 .leaflet-tooltip {
   background: rgba(0,0,0,0.92) !important;

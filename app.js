@@ -1189,6 +1189,13 @@ function initMapOnce() {
     maxZoom: 18, opacity: 0.85, attribution: '© OpenSeaMap',
   }).addTo(leafletMap);
 
+  // ---- Layer panes for explicit z-ordering (per SITAWARE convention) ----
+  // base 200 → overlay 400 → rings 500 → quakes 540 → infra 550 →
+  // tracks 600 → aircraft 650 → HUD 700+
+  leafletMap.createPane('quakesPane').style.zIndex   = '540';
+  leafletMap.createPane('tracksPane').style.zIndex   = '600';
+  leafletMap.createPane('aircraftPane').style.zIndex = '650';
+
   // ---- Graticule (lat/lon lines every 10°, faint) ----
   const gratStyle = { color: '#252525', weight: 0.6, opacity: 0.8, interactive: false };
   for (let lat = -60; lat <= 80; lat += 10) L.polyline([[lat, -180], [lat, 180]], gratStyle).addTo(leafletMap);
@@ -1245,6 +1252,21 @@ function initMapOnce() {
 
   // ---- Airport + mil-base overlays (rendered once) ----
   renderAirportsAndBases();
+
+  // ---- USGS earthquakes (last 24h, no key) ----
+  fetchAndRenderQuakes();
+
+  // ---- Layer control panel — toggle each overlay on/off ----
+  // Built using native Leaflet control; sits top-left below the HUD.
+  setTimeout(() => {
+    const overlays = {};
+    if (civilLayer) overlays['◯ AIRPORTS · CIV'] = civilLayer;
+    if (milLayer)   overlays['■ MIL BASES']       = milLayer;
+    if (quakeLayer) overlays['◉ EARTHQUAKES 24h'] = quakeLayer;
+    L.control.layers(null, overlays, {
+      position: 'topleft', collapsed: true,
+    }).addTo(leafletMap);
+  }, 1200);
 
   // ---- Plane dead-reckoning tick — makes tracks move between fetches ----
   startPlaneTick();
@@ -1317,6 +1339,93 @@ function renderAirportsAndBases() {
 
   civilLayer.addTo(leafletMap);
   milLayer.addTo(leafletMap);
+}
+
+/* ============================================================
+ * TRACK HISTORY — last N positions per aircraft, drawn as a fading polyline.
+ * Top SITAWARE feature request (r/ADSB). Uses data we already pull.
+ * ============================================================ */
+const trackHistory = new Map(); // icao -> [{lat, lon, t}, ...]
+const trackLines   = new Map(); // icao -> L.Polyline
+const TRACK_MAX_PTS = 40;
+const TRACK_KEEP_MS = 30 * 60_000; // 30 min
+
+function pushTrackPoint(icao, lat, lon) {
+  let arr = trackHistory.get(icao);
+  if (!arr) { arr = []; trackHistory.set(icao, arr); }
+  arr.push({ lat, lon, t: Date.now() });
+  const cutoff = Date.now() - TRACK_KEEP_MS;
+  while (arr.length && arr[0].t < cutoff) arr.shift();
+  while (arr.length > TRACK_MAX_PTS) arr.shift();
+}
+function renderTrackFor(icao, color) {
+  if (!leafletMap) return;
+  const arr = trackHistory.get(icao);
+  let line = trackLines.get(icao);
+  if (!arr || arr.length < 2) {
+    if (line) { leafletMap.removeLayer(line); trackLines.delete(icao); }
+    return;
+  }
+  const latlngs = arr.map((p) => [p.lat, p.lon]);
+  if (line) {
+    line.setLatLngs(latlngs);
+    line.setStyle({ color });
+  } else {
+    line = L.polyline(latlngs, {
+      color, weight: 1.4, opacity: 0.55,
+      interactive: false,
+      pane: 'tracksPane',
+    });
+    line.addTo(leafletMap);
+    trackLines.set(icao, line);
+  }
+}
+function clearTrack(icao) {
+  const line = trackLines.get(icao);
+  if (line && leafletMap) leafletMap.removeLayer(line);
+  trackLines.delete(icao);
+  trackHistory.delete(icao);
+}
+
+/* ============================================================
+ * USGS EARTHQUAKES — free, no key, ~24h significant events.
+ * Useful as a nuclear-site seismic-anomaly proxy + general SITAWARE.
+ * ============================================================ */
+let quakeLayer = null;
+async function fetchAndRenderQuakes() {
+  if (!leafletMap) return;
+  try {
+    const r = await fetchTimeout(
+      'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson',
+      {}, 8000,
+    );
+    if (!r.ok) return;
+    const j = await r.json();
+    const features = j.features || [];
+    if (quakeLayer) leafletMap.removeLayer(quakeLayer);
+    quakeLayer = L.layerGroup();
+    features.forEach((f) => {
+      const c = f.geometry?.coordinates || [];
+      const [lon, lat, depth] = c;
+      const mag = f.properties?.mag;
+      if (lat == null || lon == null || mag == null) return;
+      // size by magnitude, redder at higher magnitudes
+      const radius = Math.max(3, Math.min(22, mag * 3));
+      const fill = mag >= 5 ? '#ff3344' : mag >= 4 ? '#ffaa00' : '#5fc7ff';
+      L.circleMarker([lat, lon], {
+        radius, color: '#fff', weight: 1,
+        fillColor: fill, fillOpacity: 0.35,
+        interactive: true,
+        pane: 'quakesPane',
+      })
+        .bindTooltip(
+          `<b>M${mag.toFixed(1)}</b> · ${escapeHtml(f.properties.place || '')}<br>depth ${Math.round(depth || 0)} km`,
+          { sticky: true }
+        )
+        .addTo(quakeLayer);
+    });
+    quakeLayer.addTo(leafletMap);
+  } catch (e) { console.warn('[quakes]', e.message); }
 }
 
 /* ============================================================
@@ -1429,7 +1538,7 @@ function renderAircraft() {
 
     let m = planeMarkers.get(icao);
     if (!m) {
-      m = L.marker([lat, lon], { icon: planeIcon(heading, s[7], onGround) });
+      m = L.marker([lat, lon], { icon: planeIcon(heading, s[7], onGround), pane: 'aircraftPane' });
       m.bindPopup(buildPlanePopup(s));
       m.addTo(leafletMap);
       planeMarkers.set(icao, m);
@@ -1446,12 +1555,25 @@ function renderAircraft() {
       hdg: typeof heading === 'number' ? heading : 0,
       t: Date.now(),
     };
+
+    // Track history: store this confirmed position + draw fading trail.
+    // Color matches the altitude band so the trail visually fades from high
+    // (amber) to low (red) as the aircraft descends.
+    pushTrackPoint(icao, lat, lon);
+    let trackColor = '#5fc7ff';
+    if (s[7] != null) {
+      if (s[7] > 9144)      trackColor = '#ffaa00';
+      else if (s[7] > 3048) trackColor = '#5fc7ff';
+      else                  trackColor = '#ff3344';
+    }
+    renderTrackFor(icao, trackColor);
   }
 
   for (const [icao, m] of planeMarkers) {
     if (!seen.has(icao)) {
       leafletMap.removeLayer(m);
       planeMarkers.delete(icao);
+      clearTrack(icao);
     }
   }
 
