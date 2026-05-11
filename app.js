@@ -1466,25 +1466,29 @@ function clearTrack(icao) {
  * ============================================================ */
 let airspaceLayer = null;
 
-/** OpenAIP type code → display style */
+/** OpenAIP airspace type codes (verified empirically against Gulf bbox):
+ *   1 RESTRICTED/MTZ · 2 DANGER · 3 PROHIBITED · 4 CTR · 6 MBZ · 7 TMA ·
+ *   10 FIR · 13 ATZ · 26 CTA · 28 SPEC USE · 29 WILDLIFE */
 function airspaceStyle(t) {
   switch (Number(t)) {
-    case 19: return { color: '#5fc7ff', weight: 1.4, opacity: 0.55, dashArray: '6 4', fillOpacity: 0.02, label: 'FIR' };
-    case 12: return { color: '#b794ff', weight: 1.2, opacity: 0.45, dashArray: '4 3', fillOpacity: 0.02, label: 'CTA' };
+    case 10: return { color: '#5fc7ff', weight: 1.5, opacity: 0.6,  dashArray: '8 4', fillOpacity: 0.02, label: 'FIR' };
+    case 26: return { color: '#b794ff', weight: 1.2, opacity: 0.45, dashArray: '4 3', fillOpacity: 0.02, label: 'CTA' };
     case 4:  return { color: '#ffaa00', weight: 1.2, opacity: 0.55, dashArray: '2 3', fillOpacity: 0.04, label: 'CTR' };
-    case 8:  return { color: '#ffaa00', weight: 1.0, opacity: 0.45, dashArray: '3 3', fillOpacity: 0.03, label: 'TMA' };
+    case 7:  return { color: '#ffaa00', weight: 1.0, opacity: 0.45, dashArray: '3 3', fillOpacity: 0.03, label: 'TMA' };
+    case 13: return { color: '#ffd866', weight: 0.9, opacity: 0.4,  dashArray: '2 4', fillOpacity: 0.02, label: 'ATZ' };
     case 1:  return { color: '#ff3344', weight: 1.4, opacity: 0.6,  dashArray: '4 2', fillOpacity: 0.05, label: 'RESTR' };
     case 2:  return { color: '#ff6ad5', weight: 1.4, opacity: 0.6,  dashArray: '5 3', fillOpacity: 0.05, label: 'DANGER' };
-    case 3:  return { color: '#ff3344', weight: 1.8, opacity: 0.7,  dashArray: '2 2', fillOpacity: 0.08, label: 'PROHIB' };
-    default: return { color: '#888',    weight: 0.8, opacity: 0.35, dashArray: '2 4', fillOpacity: 0.02, label: 'OTHER' };
+    case 3:  return { color: '#ff3344', weight: 1.8, opacity: 0.7,  dashArray: '2 2', fillOpacity: 0.1,  label: 'PROHIB' };
+    case 6:  return { color: '#888',    weight: 0.7, opacity: 0.3,  dashArray: '1 3', fillOpacity: 0.01, label: 'MBZ' };
+    default: return { color: '#888',    weight: 0.7, opacity: 0.3,  dashArray: '2 4', fillOpacity: 0.02, label: 'AREA' };
   }
 }
 
 async function fetchAndRenderAirspace() {
   if (!leafletMap) return;
   try {
-    // FIR (19) + CTA (12) + RESTRICTED (1) + DANGER (2) + PROHIBITED (3)
-    const r = await fetchTimeout('/api/airspace?bbox=40,12,70,42&types=19,12,1,2,3&limit=300', {}, 12000);
+    // FIR (10) + CTA (26) + CTR (4) + TMA (7) + RESTR (1) + DANGER (2) + PROHIB (3)
+    const r = await fetchTimeout('/api/airspace?bbox=40,12,70,42&types=10,26,4,7,1,2,3&limit=400', {}, 12000);
     if (!r.ok) return;
     const j = await r.json();
     if (!j.ok || !Array.isArray(j.items)) return;
