@@ -2440,14 +2440,15 @@ const US_GOV_SOURCE_IDS = new Set([
 /* US GOV sub-tabs — drill down by department. Rendered as a chip strip
  * at the top of the us-gov view; click swaps the filter. */
 const US_GOV_SUBTABS = [
-  { id: 'potus',    label: 'POTUS',               sources: ['wh', 'wh-news', 'fb-latest', 'fb-cal', 'fb-tx', 'fb-news'] },
-  { id: 'congress', label: 'CONGRESS',            sources: ['senate-rc', 'house-rc'] },
-  { id: 'state',    label: 'STATE · DOS',         sources: ['dos', 'dos-pr'] },
-  { id: 'war',      label: 'WAR · DOD',           sources: ['dow'] },
-  { id: 'energy',   label: 'ENERGY · DOE',        sources: ['doe', 'doe-news'] },
-  { id: 'justice',  label: 'JUSTICE · DOJ',       sources: ['doj', 'doj-news'] },
-  { id: 'treasury', label: 'TREASURY · OFAC',     sources: ['treasury', 'treas-news', 'ofac'] },
-  { id: 'all',      label: 'ALL US-GOV',          sources: null },
+  { id: 'potus',    label: 'POTUS',     sources: ['fb-cal'] },
+  { id: 'wh',       label: 'WH',        sources: ['wh', 'wh-news', 'fb-latest', 'fb-tx', 'fb-news'] },
+  { id: 'congress', label: 'CONGRESS',  sources: ['senate-rc', 'house-rc'] },
+  { id: 'state',    label: 'DOS',       sources: ['dos', 'dos-pr'] },
+  { id: 'war',      label: 'DOW',       sources: ['dow'] },
+  { id: 'energy',   label: 'DOE',       sources: ['doe', 'doe-news'] },
+  { id: 'justice',  label: 'DOJ',       sources: ['doj', 'doj-news'] },
+  { id: 'treasury', label: 'TREASURY',  sources: ['treasury', 'treas-news', 'ofac'] },
+  { id: 'all',      label: 'ALL',       sources: null },
 ];
 function isUsGovItem(it) {
   if (!it) return false;
