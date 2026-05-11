@@ -1199,19 +1199,30 @@ function switchPreset(key) {
   refreshMapData();
 }
 
-/* AIR/SEA mode toggle on the map view */
+/* AIR / SEA / FR24 mode toggle on the map view */
 function setMapMode(mode) {
-  const overlay = document.getElementById('marine-overlay');
-  if (!overlay) return;
+  const sea = document.getElementById('marine-overlay');
+  const fr  = document.getElementById('fr24-overlay');
+  if (!sea || !fr) return;
+
   if (mode === 'sea') {
-    // Lazy-set the iframe src so it doesn't load until first toggle
-    if (!overlay.dataset.loaded) {
-      overlay.src = 'https://www.marinetraffic.com/en/ais/embed/zoom:7/centery:25.5/centerx:55.5/maptype:1/shownames:false/mmsi:0/shipid:0/fleet:/fleet_id:0/vtypes:/showmenu:false/remember:false';
-      overlay.dataset.loaded = '1';
+    if (!sea.dataset.loaded) {
+      sea.src = 'https://www.marinetraffic.com/en/ais/embed/zoom:7/centery:25.5/centerx:55.5/maptype:1/shownames:false/mmsi:0/shipid:0/fleet:/fleet_id:0/vtypes:/showmenu:false/remember:false';
+      sea.dataset.loaded = '1';
     }
-    overlay.hidden = false;
+    sea.hidden = false;
+    fr.hidden = true;
+  } else if (mode === 'fr24') {
+    if (!fr.dataset.loaded) {
+      // Flightradar24 simple embed — no key, no auth, commercial coverage
+      fr.src = 'https://www.flightradar24.com/simple?lat=25.0&lon=55.0&z=7';
+      fr.dataset.loaded = '1';
+    }
+    fr.hidden = false;
+    sea.hidden = true;
   } else {
-    overlay.hidden = true;
+    sea.hidden = true;
+    fr.hidden = true;
   }
   document.querySelectorAll('.mode-btn').forEach((b) =>
     b.classList.toggle('active', b.dataset.mode === mode)

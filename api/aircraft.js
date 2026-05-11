@@ -66,30 +66,52 @@ export default async function handler(request) {
   try { preset = new URL(request.url).searchParams.get('preset') || 'uae'; } catch {}
   const p = PRESETS[preset] || PRESETS.uae;
 
-  // Multiple community ADS-B feeds — try in order. Each blocks/limits a bit
-  // differently and the union is reliable.
+  // Try AirLabs first IF an API key is configured — commercial coverage,
+  // bbox-native (one call returns the whole Gulf). 1000 calls/month free.
+  const airlabsKey = process.env.AIRLABS_API_KEY;
+  if (airlabsKey) {
+    try {
+      // Convert radius to a bbox: rough degrees per nm
+      const dLat = p.radius / 60; // 60 nm per latitude degree
+      const dLon = p.radius / (60 * Math.cos((p.lat * Math.PI) / 180));
+      const bbox = `${(p.lat - dLat).toFixed(2)},${(p.lon - dLon).toFixed(2)},${(p.lat + dLat).toFixed(2)},${(p.lon + dLon).toFixed(2)}`;
+      const r = await fetch(
+        `https://airlabs.co/api/v9/flights?api_key=${encodeURIComponent(airlabsKey)}&bbox=${bbox}`,
+        { headers: { 'Accept': 'application/json' }, cache: 'no-store' }
+      );
+      if (r.ok) {
+        const j = await r.json();
+        const arr = j?.response || [];
+        if (Array.isArray(arr) && arr.length) {
+          const states = arr.map(airlabsToOpenSky).filter(Boolean);
+          return json(200, {
+            ok: true, preset,
+            center: { lat: p.lat, lon: p.lon, radius_nm: p.radius },
+            source: 'airlabs',
+            time: Math.floor(Date.now() / 1000),
+            states,
+          });
+        }
+      }
+    } catch (e) { /* fall through */ }
+  }
+
+  // Community ADS-B feeders — tried in order. ADSB One is a separate
+  // feeder pool from adsb.lol so often has different coverage.
   const endpoints = [
-    {
-      url: `https://api.adsb.lol/v2/point/${p.lat}/${p.lon}/${p.radius}`,
-      name: 'adsb.lol',
-    },
-    {
-      url: `https://api.airplanes.live/v2/point/${p.lat}/${p.lon}/${p.radius}`,
-      name: 'airplanes.live',
-    },
-    {
-      url: `https://opendata.adsb.fi/api/v2/point/${p.lat}/${p.lon}/${p.radius}`,
-      name: 'adsb.fi',
-    },
+    { url: `https://api.adsb.one/v2/point/${p.lat}/${p.lon}/${p.radius}`,     name: 'adsb.one' },
+    { url: `https://api.adsb.lol/v2/point/${p.lat}/${p.lon}/${p.radius}`,     name: 'adsb.lol' },
+    { url: `https://opendata.adsb.fi/api/v3/lat/${p.lat}/lon/${p.lon}/dist/${p.radius}`, name: 'adsb.fi' },
+    { url: `https://api.airplanes.live/v2/point/${p.lat}/${p.lon}/${p.radius}`, name: 'airplanes.live' },
   ];
 
-  let lastErr = null;
+  let lastErr = null, best = null;
   for (const ep of endpoints) {
     try {
       const r = await fetch(ep.url, {
         headers: {
           'Accept': 'application/json',
-          'User-Agent': 'Mozilla/5.0 (compatible; SHIFT-Terminal/2.0; +https://shift-2-0.vercel.app)',
+          'User-Agent': 'flight-map/1.0 (contact@shift-2-0.vercel.app)',
         },
         cache: 'no-store',
       });
@@ -98,17 +120,47 @@ export default async function handler(request) {
       const list = j?.ac || j?.aircraft || [];
       if (!Array.isArray(list)) { lastErr = `${ep.name}: unexpected shape`; continue; }
       const states = list.map(toOpenSkyVector).filter(Boolean);
-      return json(200, {
-        ok: true,
-        preset,
-        center: { lat: p.lat, lon: p.lon, radius_nm: p.radius },
-        source: ep.name,
-        time: Math.floor(Date.now() / 1000),
-        states,
-      });
+      const airborne = states.filter((s) => !s[8]).length;
+      // Keep the source with the most airborne tracks — feeder pools vary
+      if (!best || airborne > best.airborne) {
+        best = { name: ep.name, states, airborne };
+      }
+      // If we have >40 airborne, that's enough — return early
+      if (airborne >= 40) break;
     } catch (e) {
       lastErr = `${ep.name}: ${e?.message || e}`;
     }
   }
+  if (best) {
+    return json(200, {
+      ok: true,
+      preset,
+      center: { lat: p.lat, lon: p.lon, radius_nm: p.radius },
+      source: best.name,
+      airborne: best.airborne,
+      time: Math.floor(Date.now() / 1000),
+      states: best.states,
+    });
+  }
   return json(200, { ok: false, error: 'all ADS-B feeds failed', detail: lastErr, preset });
+}
+
+/* AirLabs response → OpenSky-shape state vector
+ *   { hex, flight_number, flag, lat, lng, alt(m), speed(kt), v_speed(m/s),
+ *     dir, status } */
+function airlabsToOpenSky(a) {
+  if (a.lat == null || a.lng == null) return null;
+  const onGround = a.status === 'ground' || a.alt === 0;
+  return [
+    a.hex || '',
+    (a.flight_number || a.flight_iata || '').trim(),
+    a.flag || '',
+    null, null,
+    a.lng, a.lat,
+    typeof a.alt === 'number' ? a.alt : null,
+    onGround,
+    typeof a.speed === 'number' ? a.speed * 0.514444 : null,
+    a.dir ?? 0,
+    typeof a.v_speed === 'number' ? a.v_speed : null,
+  ];
 }
