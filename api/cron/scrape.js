@@ -53,6 +53,15 @@ const FEED_URLS = [
   'https://moi.gov.ae/ar/rss/rss.aspx',
   'https://www.youtube.com/feeds/videos.xml?channel_id=UCMebk44F_zVLj-7aD_mSUhQ',
   'https://www.youtube.com/feeds/videos.xml?channel_id=UCLqu78o49yHSQTOUEWh_8Vg',
+  // US government
+  'https://www.whitehouse.gov/feed/',
+  'https://www.state.gov/feed/',
+  'https://www.war.gov/DesktopModules/ArticleCS/RSS.ashx?ContentType=1&Site=945&max=20',
+  'https://www.energy.gov/rss/articles.xml',
+  'https://www.justice.gov/feeds/justice-news.xml',
+  'https://home.treasury.gov/news/press-releases/feed',
+  'https://www.senate.gov/legislative/LIS/roll_call_lists/votes_new.xml',
+  'https://rollcall.com/factbase/trump/topic/calendar/feed/',
 ];
 
 const json = (status, payload) => new Response(JSON.stringify(payload), {

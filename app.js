@@ -137,6 +137,9 @@ const SOURCES = [
   { id: 'wh',        name: 'White House',     url: 'https://www.whitehouse.gov/feed/',                                                                                                              region: 'US-GOV', lang: 'en' },
   { id: 'wh-news',   name: 'WH via news',     url: 'https://news.google.com/rss/search?q=site:whitehouse.gov+OR+%22White+House%22+statement&when:1d&hl=en-US&gl=US&ceid=US:en',                       region: 'US-GOV', lang: 'en' },
   { id: 'trump-ts',  name: 'Trump statements',url: 'https://news.google.com/rss/search?q=%22President+Trump%22+OR+%22Truth+Social%22+OR+%22Trump+said%22&when:1d&hl=en-US&gl=US&ceid=US:en',         region: 'US-GOV', lang: 'en' },
+  { id: 'fb-cal',    name: 'Trump Calendar (Factbase)', url: 'https://rollcall.com/factbase/trump/topic/calendar/feed/',                                                                              region: 'US-GOV', lang: 'en' },
+  { id: 'fb-news',   name: 'Factbase via news',         url: 'https://news.google.com/rss/search?q=site:rollcall.com/factbase&when:3d&hl=en-US&gl=US&ceid=US:en',                                       region: 'US-GOV', lang: 'en' },
+  { id: 'trump-cal', name: 'Trump schedule (news)',     url: 'https://news.google.com/rss/search?q=%22Trump+schedule%22+OR+%22Trump+calendar%22+OR+%22President+Trump+today%22&when:1d&hl=en-US&gl=US&ceid=US:en', region: 'US-GOV', lang: 'en' },
   { id: 'dos',       name: 'DoS State Dept',  url: 'https://www.state.gov/feed/',                                                                                                                    region: 'US-GOV', lang: 'en' },
   { id: 'dos-pr',    name: 'DoS press',       url: 'https://news.google.com/rss/search?q=site:state.gov+press+OR+release&when:2d&hl=en-US&gl=US&ceid=US:en',                                          region: 'US-GOV', lang: 'en' },
   { id: 'dow',       name: 'DoW War Dept',    url: 'https://www.war.gov/DesktopModules/ArticleCS/RSS.ashx?ContentType=1&Site=945&max=20',                                                            region: 'US-GOV', lang: 'en' },
@@ -2425,6 +2428,7 @@ function isUaeGovItem(it) {
 /* Sources that belong to the US GOV tab — federal exec branch + Congress */
 const US_GOV_SOURCE_IDS = new Set([
   'wh', 'wh-news', 'trump-ts',
+  'fb-cal', 'fb-news', 'trump-cal',
   'dos', 'dos-pr',
   'dow',
   'doe', 'doe-news',
@@ -2436,14 +2440,15 @@ const US_GOV_SOURCE_IDS = new Set([
 /* US GOV sub-tabs — drill down by department. Rendered as a chip strip
  * at the top of the us-gov view; click swaps the filter. */
 const US_GOV_SUBTABS = [
-  { id: 'rollcall', label: 'ROLL CALL',       sources: ['senate-rc', 'house-rc'] },
-  { id: 'wh',       label: 'WHITE HOUSE',     sources: ['wh', 'wh-news', 'trump-ts'] },
-  { id: 'state',    label: 'STATE · DOS',     sources: ['dos', 'dos-pr'] },
-  { id: 'war',      label: 'WAR · DOD',       sources: ['dow'] },
-  { id: 'energy',   label: 'ENERGY · DOE',    sources: ['doe', 'doe-news'] },
-  { id: 'justice',  label: 'JUSTICE · DOJ',   sources: ['doj', 'doj-news'] },
-  { id: 'treasury', label: 'TREASURY · OFAC', sources: ['treasury', 'treas-news', 'ofac'] },
-  { id: 'all',      label: 'ALL US-GOV',      sources: null }, // null = use full US_GOV_SOURCE_IDS
+  { id: 'rollcall', label: 'ROLL CALL',          sources: ['senate-rc', 'house-rc'] },
+  { id: 'trump',    label: 'TRUMP TRACKER',      sources: ['fb-cal', 'fb-news', 'trump-cal', 'trump-ts'] },
+  { id: 'wh',       label: 'WHITE HOUSE',        sources: ['wh', 'wh-news'] },
+  { id: 'state',    label: 'STATE · DOS',        sources: ['dos', 'dos-pr'] },
+  { id: 'war',      label: 'WAR · DOD',          sources: ['dow'] },
+  { id: 'energy',   label: 'ENERGY · DOE',       sources: ['doe', 'doe-news'] },
+  { id: 'justice',  label: 'JUSTICE · DOJ',      sources: ['doj', 'doj-news'] },
+  { id: 'treasury', label: 'TREASURY · OFAC',    sources: ['treasury', 'treas-news', 'ofac'] },
+  { id: 'all',      label: 'ALL US-GOV',         sources: null }, // null = full set
 ];
 function isUsGovItem(it) {
   if (!it) return false;
