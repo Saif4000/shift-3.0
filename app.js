@@ -95,7 +95,8 @@ const SOURCES = [
   { id: 'tnmena',  name: 'The National MENA', url: 'https://www.thenationalnews.com/rss/mena',                 region: 'AE',   lang: 'en' },
   { id: 'an',      name: 'Arab News',         url: 'https://www.arabnews.com/rss.xml',                         region: 'SA',   lang: 'en' },
   { id: 'kt',      name: 'Khaleej Times',     url: 'https://www.khaleejtimes.com/rss',                         region: 'AE',   lang: 'en' },
-  { id: 'mee',     name: 'Middle East Eye',   url: 'https://www.middleeasteye.net/rss',                        region: 'REG',  lang: 'en' },
+  // Middle East Eye removed — known editorial bias (Qatar-linked funding allegations).
+  { id: 'barq',    name: 'UAE Barq',          url: 'https://rsshub.app/instagram/user/uae_barq_en',            region: 'AE',   lang: 'en' },
   { id: 'rt-me',   name: 'Reuters MENA',      url: 'https://news.google.com/rss/search?q=site:reuters.com+(Israel+OR+Iran+OR+Gulf+OR+Saudi+OR+UAE+OR+Gaza)+when:1d&hl=en-US&gl=US&ceid=US:en', region: 'WIRE', lang: 'en' },
   { id: 'bbc-me',  name: 'BBC Middle East',   url: 'https://feeds.bbci.co.uk/news/world/middle_east/rss.xml',  region: 'REG',  lang: 'en' },
   { id: 'alar',    name: 'Al Arabiya (AR)',   url: 'https://www.alarabiya.net/.mrss/ar.xml',                   region: 'SA',   lang: 'ar' },
@@ -215,19 +216,15 @@ const CHOKEPOINTS = [
 /* YouTube live channels — embed via /embed/live_stream?channel=ID
  * Each channel's live stream is embedded directly; if it isn't live at a
  * given moment YouTube returns its standard "no current live stream" tile. */
+/* Verified 24/7 broadcasters only — channels with reliable live streams. */
 const LIVE_CHANNELS = [
   { id: 'UCNye-wNBqNL5ZzHSJj3l8Bg', name: 'AL JAZEERA EN',  desk: 'DOHA · QA' },
-  { id: 'UCsLcwjY6V1c0kdmAFwlNxgw', name: 'AL ARABIYA EN',  desk: 'DUBAI · AE' },
-  { id: 'UC68Mz_kS2dVCpYTtmiuwo3w', name: 'AL HADATH',      desk: 'RIYADH · SA (AR)' },
-  { id: 'UCfFR8Tt0nnnT-tQp3JEdh7g', name: 'I24 NEWS EN',    desk: 'TEL AVIV · IL' },
   { id: 'UCQfwfsi5VrQ8yKZ-UWmAEFg', name: 'FRANCE 24 EN',   desk: 'PARIS · FR' },
   { id: 'UCoMdktPbSTixAyNGwb-UYkQ', name: 'SKY NEWS',       desk: 'LONDON · UK' },
   { id: 'UCknLrEdhRCp1aegoMqRaCZg', name: 'DW NEWS',        desk: 'BERLIN · DE' },
-  { id: 'UC7fWeaHhqgM4Ry-RMpM2YYw', name: 'TRT WORLD',      desk: 'ISTANBUL · TR' },
   { id: 'UC_gUM8rL-Lrg6O3adPW9K1g', name: 'WION',           desk: 'NEW DELHI · IN' },
+  { id: 'UC7fWeaHhqgM4Ry-RMpM2YYw', name: 'TRT WORLD',      desk: 'ISTANBUL · TR' },
   { id: 'UCBi2mrWuNuyYy4gbM6fU18Q', name: 'ABC NEWS',       desk: 'NEW YORK · US' },
-  { id: 'UCIALMKvObZNtJ6AmdCLP7Lg', name: 'BLOOMBERG TV',   desk: 'NEW YORK · US' },
-  { id: 'UCMmaBzfCCwZ2KqaBJjkj0fw', name: 'CNA',            desk: 'SINGAPORE · SG' },
 ];
 
 /* ============================================================
@@ -1220,7 +1217,7 @@ function renderLive() {
 async function fetchGdeltSearch(q) {
   const url = `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(q)}&mode=ArtList&maxrecords=40&format=json&sort=DateDesc&timespan=2d`;
   try {
-    const r = await fetch(url);
+    const r = await fetchTimeout(url, {}, 9000);
     const j = await r.json();
     state.searchGdelt = (j.articles || []).map((a) => ({
       title: a.title, url: a.url, domain: a.domain,
@@ -1232,6 +1229,77 @@ async function fetchGdeltSearch(q) {
   }
 }
 
+/* ============================================================
+ * ASK AI — Puter.js wrapper around Perplexity Sonar (citation model).
+ * Free + unlimited via puter.com (user-pays model — first call may pop
+ * the Puter sign-in dialog). The API key model means the answer renders
+ * the same regardless of whether we have one.
+ * ============================================================ */
+function extractAIText(r) {
+  if (!r) return '';
+  if (typeof r === 'string') return r;
+  return r?.message?.content ||
+         r?.content ||
+         r?.text ||
+         r?.choices?.[0]?.message?.content ||
+         '';
+}
+function extractCitations(r) {
+  if (!r || typeof r === 'string') return [];
+  const list = r?.citations ||
+               r?.search_results ||
+               r?.sources ||
+               r?.message?.citations ||
+               r?.choices?.[0]?.message?.citations ||
+               [];
+  return list.map((c) => {
+    if (typeof c === 'string') return { url: c, title: c };
+    return {
+      url: c.url || c.link || '',
+      title: c.title || c.url || c.link || 'source',
+      snippet: c.snippet || c.text || '',
+    };
+  });
+}
+function hostnameOf(u) {
+  try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return ''; }
+}
+
+async function askAI(q) {
+  if (!q) return;
+  if (!window.puter?.ai?.chat) {
+    state.aiAnswer = { error: 'Puter.js not loaded. Refresh to retry.' };
+    state.aiLoading = false;
+    renderSearch();
+    return;
+  }
+  state.searchActive = true;
+  state.searchQuery = q;
+  state.aiLoading = true;
+  state.aiAnswer = null;
+  $('#query-clear').hidden = false;
+  renderSearch();
+
+  // Run cached + GDELT retrieval in parallel — the user gets citations from
+  // BOTH our own feed and the AI's own web search.
+  fetchGdeltSearch(q).then(renderSearch);
+
+  try {
+    const prompt =
+      `You are an intelligence analyst. Answer in 4–6 short bullet points with inline citations [1], [2], etc. ` +
+      `Focus on facts from the last 7 days. Topic: ${q}`;
+    const r = await window.puter.ai.chat(prompt, { model: 'perplexity-sonar' });
+    state.aiAnswer = {
+      text: extractAIText(r),
+      citations: extractCitations(r),
+    };
+  } catch (e) {
+    state.aiAnswer = { error: e?.message || String(e) };
+  }
+  state.aiLoading = false;
+  renderSearch();
+}
+
 function localMatch(it, q) {
   return (
     it.title.toLowerCase().includes(q) ||
@@ -1240,6 +1308,47 @@ function localMatch(it, q) {
     (it.region || '').toLowerCase().includes(q) ||
     (it.originalTitle || '').toLowerCase().includes(q)
   );
+}
+
+function renderAIBlock() {
+  if (state.aiLoading) {
+    return `
+      <div class="ai-block">
+        <div class="ai-head"><span class="ai-tag">▸ AI SYNTHESIS · PERPLEXITY SONAR</span><span class="ai-meta">via Puter.js</span></div>
+        <div class="ai-loading">Synthesizing answer with citations…</div>
+      </div>
+    `;
+  }
+  const a = state.aiAnswer;
+  if (!a) return '';
+  if (a.error) {
+    return `
+      <div class="ai-block">
+        <div class="ai-head"><span class="ai-tag">▸ AI SYNTHESIS</span><span class="ai-meta">error</span></div>
+        <div class="ai-err">${escapeHtml(a.error)} · Click ASK AI again — the first call may need a free Puter sign-in popup.</div>
+      </div>
+    `;
+  }
+  // Convert [1] [2] markers into clickable sup links if citations are present
+  let textHtml = escapeHtml(a.text || '');
+  textHtml = textHtml.replace(/\[(\d+)\]/g, (_, n) => `<sup data-cite="${n}">[${n}]</sup>`);
+  const citesHtml = (a.citations || []).map((c, i) => `
+    <a class="ai-cite" href="${escapeHtml(c.url)}" target="_blank" rel="noopener" id="ai-cite-${i+1}">
+      <span class="ai-cite-n">[${i+1}]</span>
+      <span>
+        <div>${escapeHtml(c.title || c.url)}</div>
+        <div class="ai-cite-host">${escapeHtml(hostnameOf(c.url))}</div>
+      </span>
+    </a>
+  `).join('');
+  return `
+    <div class="ai-block">
+      <div class="ai-head"><span class="ai-tag">▸ AI SYNTHESIS · PERPLEXITY SONAR</span><span class="ai-meta">via Puter.js · free</span></div>
+      <div class="ai-body">${textHtml}</div>
+      ${citesHtml ? `<div class="ai-cites">${citesHtml}</div>` : ''}
+      <div class="ai-disclaimer">▮ AI-SYNTHESIZED · verify all claims against citations · this is the only AI-generated text in the app</div>
+    </div>
+  `;
 }
 
 function renderSearch() {
@@ -1253,8 +1362,9 @@ function renderSearch() {
     <div class="search-summary">
       <span class="search-kw">▸ ${escapeHtml(state.searchQuery)}</span>
       <span class="search-counts">${local.length} cached · ${state.searchGdelt.length} GDELT · ${sources.size} sources</span>
-      <span class="search-nb">RETRIEVAL ONLY · NO LLM SUMMARY</span>
+      <span class="search-nb">RETRIEVAL + OPTIONAL AI SYNTHESIS</span>
     </div>
+    ${renderAIBlock()}
     <div class="section-head">CACHED FEED MATCHES <span class="sub">${local.length}</span></div>
     ${local.length ? local.slice(0, 80).map(renderItem).join('') : '<div class="empty">No cached matches.</div>'}
     <div class="section-head">GDELT 2.0 — LIVE WEB QUERY · 2 DAYS <span class="sub">${state.searchGdelt.length}</span></div>
@@ -1277,6 +1387,7 @@ function renderSearch() {
 function bindSearch() {
   const input = $('#query');
   const goBtn = $('#query-go');
+  const aiBtn = $('#query-ai');
   const clearBtn = $('#query-clear');
 
   const submit = () => {
@@ -1285,22 +1396,34 @@ function bindSearch() {
       state.searchActive = false;
       state.searchQuery = '';
       state.searchGdelt = [];
+      state.aiAnswer = null;
+      state.aiLoading = false;
       clearBtn.hidden = true;
       renderContent();
       return;
     }
     state.searchActive = true;
     state.searchQuery = q;
+    state.aiAnswer = null;
+    state.aiLoading = false;
     clearBtn.hidden = false;
     renderSearch();
     fetchGdeltSearch(q).then(renderSearch);
   };
 
+  const submitAI = () => {
+    const q = input.value.trim();
+    if (!q) { toast('Enter a query first'); input.focus(); return; }
+    askAI(q);
+  };
+
   input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { submitAI(); return; }
     if (e.key === 'Enter') submit();
     if (e.key === 'Escape') { input.value = ''; submit(); input.blur(); }
   });
   goBtn.addEventListener('click', submit);
+  aiBtn.addEventListener('click', submitAI);
   clearBtn.addEventListener('click', () => { input.value = ''; submit(); input.focus(); });
 }
 
