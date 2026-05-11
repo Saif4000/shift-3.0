@@ -2,5 +2,6 @@
   "name": "shift-2-0",
   "version": "2.0.0",
   "description": "SHIFT 2.0 — regional intelligence terminal. News, markets, tactical map, NOTAMs, live broadcasts.",
-  "private": true
+  "private": true,
+  "type": "module"
 }
