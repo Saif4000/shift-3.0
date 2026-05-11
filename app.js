@@ -228,20 +228,33 @@ const CHOKEPOINTS = [
 /* YouTube live channels — embed via /embed/live_stream?channel=ID
  * Each channel's live stream is embedded directly; if it isn't live at a
  * given moment YouTube returns its standard "no current live stream" tile. */
-/* Verified 24/7 broadcasters. Bloomberg restored.
- * NOTE: A subagent is currently researching the most reliable channel IDs
- * and embed strategy on Reddit/GitHub — this list will be refined when it
- * reports back. */
+/**
+ * Verified 24/7 stable video IDs (cross-referenced via Reddit, iptv-org, the
+ * Grafana News Monitoring Dashboards repo, and react-livestream community
+ * lists — as of May 2026).
+ * Video-ID embeds are more reliable than channel-live-stream embeds because
+ * networks sometimes publish a second concurrent stream that the channel-embed
+ * picks up by mistake (placeholders/premieres).
+ */
 const LIVE_CHANNELS = [
-  { id: 'UCNye-wNBqNL5ZzHSJj3l8Bg', name: 'AL JAZEERA EN',  desk: 'DOHA · QA' },
-  { id: 'UCQfwfsi5VrQ8yKZ-UWmAEFg', name: 'FRANCE 24 EN',   desk: 'PARIS · FR' },
-  { id: 'UCoMdktPbSTixAyNGwb-UYkQ', name: 'SKY NEWS',       desk: 'LONDON · UK' },
-  { id: 'UCknLrEdhRCp1aegoMqRaCZg', name: 'DW NEWS',        desk: 'BERLIN · DE' },
-  { id: 'UCIALMKvObZNtJ6AmdCLP7Lg', name: 'BLOOMBERG TV',   desk: 'NEW YORK · US' },
-  { id: 'UC_gUM8rL-Lrg6O3adPW9K1g', name: 'WION',           desk: 'NEW DELHI · IN' },
-  { id: 'UC7fWeaHhqgM4Ry-RMpM2YYw', name: 'TRT WORLD',      desk: 'ISTANBUL · TR' },
-  { id: 'UCBi2mrWuNuyYy4gbM6fU18Q', name: 'ABC NEWS',       desk: 'NEW YORK · US' },
+  { videoId: 'gCNeDWCI0vo', channelId: 'UCNye-wNBqNL5ZzHSJj3l8Bg', name: 'AL JAZEERA EN', desk: 'DOHA · QA' },
+  { videoId: 'oJUvTVdTMyY', channelId: 'UCoMdktPbSTixAyNGwb-UYkQ', name: 'SKY NEWS',      desk: 'LONDON · UK' },
+  { videoId: 'Ap-UM1O9RBU', channelId: 'UCQfwfsi5VrQ8yKZ-UWmAEFg', name: 'FRANCE 24 EN',  desk: 'PARIS · FR' },
+  { videoId: 'tZT2MCYu6Zw', channelId: 'UCknLrEdhRCp1aegoMqRaCZg', name: 'DW NEWS',       desk: 'BERLIN · DE' },
+  // Bloomberg Originals (Quicktake) — the actual 24/7 simulcast, NOT 'Bloomberg Television'.
+  { videoId: 'DxmDPrfinXY', channelId: 'UCUMZ7gohGI9HcU9VNsr2FJQ', name: 'BLOOMBERG',     desk: 'NEW YORK · US' },
+  { videoId: 'XnG6kabv49U', channelId: 'UCeY0bbntWzzVIaj2z3QigXg', name: 'NBC NEWS NOW',  desk: 'NEW YORK · US' },
+  { videoId: 'M6JwB3bbBC0', channelId: 'UCBi2mrWuNuyYy4gbM6fU18Q', name: 'ABC NEWS LIVE', desk: 'NEW YORK · US' },
+  { videoId: 'pykpO5kQJ98', channelId: 'UCSEuCFmVCknxKxAjEpC6Y4Q', name: 'EURONEWS EN',   desk: 'LYON · FR' },
+  { videoId: 's-5FP3oYYas', channelId: 'UC7fWeaHhqgM4Ry-RMpM2YYw', name: 'TRT WORLD',     desk: 'ISTANBUL · TR' },
+  { videoId: 'XWq5kBlakcQ', channelId: 'UCp9aJfYHTrIaXa5HSnRMBpQ', name: 'CNA',           desk: 'SINGAPORE · SG' },
+  { videoId: 'f0lYkdA-Gtw', channelId: 'UCSPEjw8F2nQDtmUKPFNF7_A', name: 'NHK WORLD',     desk: 'TOKYO · JP' },
 ];
+
+/** Render the first N tiles as live iframes; rest show poster thumbnails
+ *  until clicked. Avoids Chrome decoder throttling with many concurrent live
+ *  streams (community guidance: max ~4 active). */
+const LIVE_AUTO_LOAD = 4;
 
 /* ============================================================
  * STATE
@@ -911,32 +924,33 @@ function renderTicker() {
   const oilEl = $('#ticker-oil');
   if (oilEl) oilEl.innerHTML = buildLane(oilParts, 'ENERGY · LOADING');
 
-  // ---- LANE 2 · CRYPTO (LTR) ----
+  // ---- LANE 2 · CRYPTO + FX + INDICES (alternating direction) ----
   const cryptoParts = Object.entries(state.crypto).map(([id, v]) => {
     const lbl = id === 'bitcoin' ? 'BTC' : id === 'ethereum' ? 'ETH' : id.toUpperCase();
     const pct = v.usd_24h_change ?? 0;
     return tkChip(lbl, '$', v.usd, pct);
   });
-  const cryEl = $('#ticker-crypto');
-  if (cryEl) cryEl.innerHTML = buildLane(cryptoParts, 'CRYPTO · LOADING');
-
-  // ---- LANE 3 · FX + INDICES (alternating) ----
   const idxSyms = ['^spx','^dji','^ndq','^ta35','dx.f'];
   const idxParts = idxSyms.map((sym) => {
     const m = state.markets[sym]; if (!m) return null;
     return tkChip(m.label, m.unit, m.price, m.pct);
   }).filter(Boolean);
-  const fxParts = Object.entries(state.fx).map(([cur, rate]) =>
-    `<span class="tk"><b>USD/${cur}</b>${fmtNum(rate, 4)}</span>`
-  );
+  const fxOrder = ['AED','SAR','ILS','QAR','OMR','BHD','EUR','GBP','JPY','TRY','EGP'];
+  const fxParts = fxOrder
+    .filter((c) => state.fx[c] != null)
+    .map((cur) => `<span class="tk"><b>USD/${cur}</b>${fmtNum(state.fx[cur], 4)}</span>`);
+  const combined = [...cryptoParts, ...idxParts, ...fxParts];
   const fxEl = $('#ticker-fx');
-  if (fxEl) fxEl.innerHTML = buildLane([...idxParts, ...fxParts], 'FX · LOADING');
+  if (fxEl) fxEl.innerHTML = buildLane(combined, 'CRYPTO · FX · LOADING');
 }
 
 /* ============================================================
  * RENDER — STATUS STRIP (FX pinned under the ticker)
  * ============================================================ */
 function renderStatusStrip() {
+  // Strip removed — info now lives in the 2-lane ticker stack at the top.
+  return;
+  // eslint-disable-next-line no-unreachable
   const fxOrder = ['ILS','AED','SAR','EGP','QAR','EUR','GBP','TRY'];
   const cells = fxOrder
     .filter((c) => state.fx[c] != null)
