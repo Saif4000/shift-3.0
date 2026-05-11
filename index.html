@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<meta name="theme-color" content="#000000" />
+<meta name="description" content="SHIFT 2.0 — regional intelligence terminal. Security, politics, economy. US / Israel / UAE / GCC focus." />
+<title>SHIFT 2.0 · Regional Intelligence Terminal</title>
+<link rel="preconnect" href="https://api.frankfurter.app" />
+<link rel="preconnect" href="https://api.coingecko.com" />
+<link rel="preconnect" href="https://api.gdeltproject.org" />
+<link rel="preconnect" href="https://api.allorigins.win" />
+<link rel="preconnect" href="https://opensky-network.org" />
+<link rel="preconnect" href="https://api.aviationapi.com" />
+<link rel="preconnect" href="https://basemaps.cartocdn.com" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<header class="header" id="header">
+  <div class="brand-row">
+    <div class="brand">
+      <span class="logo">▮</span>SHIFT<span class="ver">2.0</span>
+      <span class="tagline">REGIONAL INTEL TERMINAL</span>
+    </div>
+    <div class="meta">
+      <span id="clock">--:--:--Z</span>
+      <button id="refresh" class="refresh-btn" title="Refresh">↻</button>
+      <span class="live"><span class="dot"></span>LIVE</span>
+    </div>
+  </div>
+
+  <div class="ticker" id="ticker">
+    <div id="ticker-track" class="ticker-track">LOADING MARKETS…</div>
+  </div>
+
+  <div class="banner" id="breaking-banner">
+    <span class="banner-tag">ALERT</span>
+    <span class="banner-text" id="breaking-text">Initialising feeds…</span>
+  </div>
+
+  <div class="search-bar">
+    <span class="search-prompt">▸</span>
+    <input id="query" type="search" autocomplete="off" spellcheck="false"
+           placeholder="QUERY · hormuz · idf · oil · sanctions · iran · houthi · uae…" />
+    <button id="query-go" class="search-go" title="Search cached feeds + GDELT live">SEARCH</button>
+    <button id="query-clear" class="search-clear" hidden title="Clear">×</button>
+  </div>
+
+  <nav class="tabs" id="tabs">
+    <button class="tab active" data-tab="all">ALL</button>
+    <button class="tab" data-tab="security">SECURITY</button>
+    <button class="tab" data-tab="politics">POLITICS</button>
+    <button class="tab" data-tab="economy">ECONOMY</button>
+    <button class="tab" data-tab="markets">MARKETS</button>
+    <button class="tab" data-tab="map">MAP</button>
+    <button class="tab" data-tab="live">LIVE</button>
+    <button class="tab" data-tab="tensions">TENSIONS</button>
+    <button class="tab" data-tab="sources">SOURCES</button>
+  </nav>
+</header>
+
+<main class="main">
+  <section class="status-strip" id="status-strip"></section>
+  <section class="content" id="content">
+    <div class="empty">Booting terminal…</div>
+  </section>
+  <section class="map-view" id="map-view" hidden>
+    <div class="section-head">
+      AIRCRAFT LIVE — TACTICAL
+      <span class="sub" id="plane-count">awaiting feed…</span>
+    </div>
+    <div class="map-wrap">
+      <div id="world-map" class="map-container"></div>
+      <span class="map-corner tl"></span>
+      <span class="map-corner tr"></span>
+      <span class="map-corner bl"></span>
+      <span class="map-corner br"></span>
+      <div class="map-hud hud-tl">
+        <div class="hud-row"><span class="hud-k">TAC</span><span class="hud-v" id="hud-airborne">— craft</span></div>
+        <div class="hud-row"><span class="hud-k">SRC</span><span class="hud-v">OPENSKY · LIVE</span></div>
+        <div class="hud-row"><span class="hud-k">BOX</span><span class="hud-v" id="hud-bbox">10/45N · 20/70E</span></div>
+      </div>
+      <div class="map-hud hud-tr">
+        <div class="hud-row"><span class="hud-v" id="hud-time">--:--:--Z</span></div>
+        <div class="hud-row"><span class="hud-k">VIEW</span><span class="hud-v" id="hud-view">MENA</span></div>
+        <div class="hud-row"><span class="hud-k">DTG</span><span class="hud-v" id="hud-dtg">--</span></div>
+      </div>
+      <div class="map-presets" id="map-presets">
+        <button class="preset active" data-preset="mena">MENA</button>
+        <button class="preset" data-preset="hormuz">HORMUZ</button>
+        <button class="preset" data-preset="redsea">RED SEA</button>
+        <button class="preset" data-preset="med">MED</button>
+        <button class="preset" data-preset="global">GLOBAL</button>
+      </div>
+      <div class="map-legend">
+        <span class="leg leg-hi">▲ HI ALT</span>
+        <span class="leg leg-mid">▲ MID</span>
+        <span class="leg leg-lo">▲ LOW</span>
+        <span class="leg leg-choke">◆ CHOKEPOINT</span>
+      </div>
+    </div>
+    <div class="section-head">
+      FAA NOTAMs — MAJOR GATEWAYS
+      <span class="sub" id="notam-count"></span>
+    </div>
+    <div class="notam-list" id="notam-list">
+      <div class="empty">Loading NOTAMs…</div>
+    </div>
+  </section>
+
+  <section class="live-view" id="live-view" hidden>
+    <div class="section-head">
+      LIVE BROADCASTS — REGIONAL &amp; GLOBAL DESKS
+      <span class="sub">click to stream · YouTube channel live</span>
+    </div>
+    <div class="live-grid" id="live-grid"></div>
+  </section>
+</main>
+
+<div class="modal-backdrop" id="modal" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <span class="modal-tag" id="modal-tag">SOURCE</span>
+      <span class="modal-meta" id="modal-meta"></span>
+      <button class="modal-x" id="modal-close" aria-label="Close">×</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-foot">
+      <button class="modal-btn primary" id="modal-open">OPEN AT SOURCE ↗  <kbd>O</kbd></button>
+      <button class="modal-btn" id="modal-copy">COPY URL  <kbd>C</kbd></button>
+      <button class="modal-btn" id="modal-next">NEXT  <kbd>J</kbd></button>
+      <button class="modal-btn" id="modal-prev">PREV  <kbd>K</kbd></button>
+      <button class="modal-btn ghost" id="modal-dismiss">CLOSE  <kbd>ESC</kbd></button>
+    </div>
+  </div>
+</div>
+
+<div class="help-overlay" id="help" hidden>
+  <div class="help-card">
+    <div class="help-head">KEYBOARD SHORTCUTS<button class="modal-x" id="help-close">×</button></div>
+    <table class="help-table">
+      <tr><td><kbd>/</kbd></td><td>focus search</td></tr>
+      <tr><td><kbd>r</kbd></td><td>refresh all feeds</td></tr>
+      <tr><td><kbd>1</kbd>…<kbd>9</kbd></td><td>switch tabs in order</td></tr>
+      <tr><td><kbd>a</kbd> <kbd>s</kbd> <kbd>p</kbd> <kbd>e</kbd> <kbd>m</kbd> <kbd>v</kbd> <kbd>l</kbd> <kbd>t</kbd></td><td>all / sec / pol / econ / mkts / map / live / tens</td></tr>
+      <tr><td><kbd>j</kbd> / <kbd>↓</kbd></td><td>next article</td></tr>
+      <tr><td><kbd>k</kbd> / <kbd>↑</kbd></td><td>previous article</td></tr>
+      <tr><td><kbd>Enter</kbd></td><td>open card</td></tr>
+      <tr><td><kbd>o</kbd></td><td>open at source (in card)</td></tr>
+      <tr><td><kbd>c</kbd></td><td>copy URL (in card)</td></tr>
+      <tr><td><kbd>Esc</kbd></td><td>close card / clear search</td></tr>
+      <tr><td><kbd>?</kbd></td><td>this help</td></tr>
+    </table>
+  </div>
+</div>
+
+<footer class="footer">
+  <span class="footer-brand">SHIFT 2.0</span>
+  <span class="footer-sep">·</span>
+  <span>No AI summaries · raw headlines only</span>
+  <span class="footer-sep">·</span>
+  <span id="source-count">— sources</span>
+  <span class="footer-sep">·</span>
+  <span id="last-update">never</span>
+</footer>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
