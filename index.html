@@ -4,8 +4,28 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
 <meta name="theme-color" content="#000000" />
-<meta name="description" content="SHIFT 2.0 — regional intelligence terminal. Security, politics, economy. US / Israel / UAE / GCC focus." />
+<meta name="description" content="SHIFT 2.0 — regional intelligence terminal. Security · politics · economy · AI · markets · live broadcasts · tactical map. UAE / GCC focus." />
 <title>SHIFT 2.0 · Regional Intelligence Terminal</title>
+
+<!-- Favicon -->
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="mask-icon" href="/favicon.svg" color="#ffaa00" />
+<link rel="apple-touch-icon" href="/favicon.svg" />
+
+<!-- Open Graph / Twitter -->
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="SHIFT 2.0" />
+<meta property="og:title" content="SHIFT 2.0 — Regional Intelligence Terminal" />
+<meta property="og:description" content="No AI slop. Live news + tactical map + markets + chokepoint monitoring. GCC focused." />
+<meta property="og:image" content="/og.svg" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:url" content="https://shift-2-0.vercel.app" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="SHIFT 2.0 — Regional Intelligence Terminal" />
+<meta name="twitter:description" content="No AI slop. Live news + tactical map + markets + chokepoint monitoring. GCC focused." />
+<meta name="twitter:image" content="/og.svg" />
+<meta name="color-scheme" content="dark" />
 <link rel="preconnect" href="https://api.frankfurter.app" />
 <link rel="preconnect" href="https://api.coingecko.com" />
 <link rel="preconnect" href="https://api.gdeltproject.org" />
@@ -17,6 +37,30 @@
 <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+
+<!-- Boot / loading overlay — runs 2.5s while preload fires in parallel -->
+<div class="boot-overlay" id="boot" aria-hidden="false">
+  <div class="boot-card">
+    <span class="bc-corner tl"></span><span class="bc-corner tr"></span>
+    <span class="bc-corner bl"></span><span class="bc-corner br"></span>
+    <div class="boot-brand">
+      <span class="bb-mark">▮</span> SHIFT <span class="bb-ver">2.0</span>
+    </div>
+    <div class="boot-tag">// REGIONAL INTEL TERMINAL · SYSTEM INIT</div>
+
+    <div class="boot-sep">─── BOOT SEQUENCE ───</div>
+
+    <div class="boot-bar-track"><div class="boot-bar" id="boot-bar"></div></div>
+    <div class="boot-stats">
+      <span id="boot-pct">000%</span>
+      <span id="boot-eta">T+0.00s / 2.50s</span>
+    </div>
+
+    <div class="boot-log" id="boot-log"></div>
+
+    <div class="boot-foot">▸ AUTHORIZED · SESSION TOKEN VERIFIED · SHA-256</div>
+  </div>
+</div>
 
 <header class="header" id="header">
   <div class="brand-row">
@@ -104,8 +148,8 @@
       </div>
     </div>
     <div class="section-head">
-      FAA NOTAMs — MAJOR GATEWAYS
-      <span class="sub" id="notam-count"></span>
+      GCC AIRSPACE — NOTAMs / ADVISORIES
+      <span class="sub" id="notam-count">UAE · QA · SA · BH · KW · OM</span>
     </div>
     <div class="notam-list" id="notam-list">
       <div class="empty">Loading NOTAMs…</div>

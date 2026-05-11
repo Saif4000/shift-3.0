@@ -8,7 +8,11 @@ export const config = {
   matcher: '/((?!_vercel|_next|favicon\\.ico|robots\\.txt).*)',
 };
 
-const HASH = '25994aa86041c167e447ac8bb85ee69f1d10ad3a075fd8c9cd73bfe67dd43106';
+/* Hash sourced from Vercel env var SHIFT_PASSWORD_HASH (set via dashboard
+ * or `vercel env add`). The fallback is the original Swallow-Granite14@ hash
+ * to keep the gate working even if the env var is missing. */
+const HASH = (typeof process !== 'undefined' && process.env && process.env.SHIFT_PASSWORD_HASH) ||
+             '25994aa86041c167e447ac8bb85ee69f1d10ad3a075fd8c9cd73bfe67dd43106';
 const COOKIE = 'shift_auth';
 
 async function sha256Hex(text) {

@@ -14,11 +14,27 @@ const PROXIES = [
 ];
 
 /**
- * Race all proxies in parallel; resolve with the first that returns 2xx.
- * Dramatically faster than sequential fallback when one proxy is slow.
+ * Plain fetch with hard timeout — replaces every direct fetch() call so
+ * a single slow endpoint can never hang the app indefinitely.
  */
-async function proxyFetch(url, opts = {}) {
+async function fetchTimeout(url, opts = {}, timeoutMs = 8000) {
+  const c = new AbortController();
+  const tid = setTimeout(() => c.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...opts, signal: c.signal });
+  } finally {
+    clearTimeout(tid);
+  }
+}
+
+/**
+ * Race all proxies in parallel; resolve with the first that returns 2xx.
+ * Each individual attempt has its own timeout — if every proxy stalls,
+ * we abandon them all instead of waiting forever.
+ */
+async function proxyFetch(url, opts = {}, timeoutMs = 8000) {
   const controllers = PROXIES.map(() => new AbortController());
+  const timers = controllers.map((c) => setTimeout(() => c.abort(), timeoutMs));
   let winnerIdx = -1;
   const tries = PROXIES.map((wrap, i) =>
     fetch(wrap(url), { ...opts, cache: 'no-store', signal: controllers[i].signal })
@@ -26,14 +42,19 @@ async function proxyFetch(url, opts = {}) {
         if (!r.ok) throw new Error('HTTP ' + r.status);
         if (winnerIdx === -1) {
           winnerIdx = i;
-          controllers.forEach((c, j) => { if (j !== i) try { c.abort(); } catch {} });
+          controllers.forEach((c, j) => {
+            if (j !== i) { try { c.abort(); } catch {} clearTimeout(timers[j]); }
+          });
         }
         return r;
       })
   );
   try {
-    return await Promise.any(tries);
+    const winner = await Promise.any(tries);
+    if (winnerIdx >= 0) clearTimeout(timers[winnerIdx]);
+    return winner;
   } catch {
+    timers.forEach((t) => clearTimeout(t));
     throw new Error('all proxies failed for ' + url);
   }
 }
@@ -135,7 +156,18 @@ const CRYPTO_IDS = ['bitcoin','ethereum'];
  *   AviationAPI    — free FAA NOTAM proxy, no key
  * ============================================================ */
 const MENA_BBOX = { lamin: 10, lamax: 45, lomin: 20, lomax: 70 };
-const NOTAM_AIRPORTS = ['KJFK','KLAX','KIAD','KORD','KMIA','KATL','KDFW','KBOS','KSFO'];
+/* GCC airports — ICAO codes
+ * UAE: Dubai (OMDB), Abu Dhabi (OMAA), Sharjah (OMSJ)
+ * QA:  Doha Hamad (OTHH)
+ * SA:  Riyadh (OERK), Jeddah (OEJN), Dammam (OEDF)
+ * BH:  Bahrain (OBBI) · KW: Kuwait (OKBK) · OM: Muscat (OOMS)
+ */
+const NOTAM_AIRPORTS = ['OMDB','OMAA','OMSJ','OTHH','OERK','OEJN','OEDF','OBBI','OKBK','OOMS'];
+const NOTAM_AIRPORT_NAMES = {
+  OMDB:'Dubai', OMAA:'Abu Dhabi', OMSJ:'Sharjah',
+  OTHH:'Doha', OERK:'Riyadh', OEJN:'Jeddah', OEDF:'Dammam',
+  OBBI:'Bahrain', OKBK:'Kuwait', OOMS:'Muscat',
+};
 
 /* Map presets — center, zoom, OpenSky bounding box */
 const MAP_PRESETS = {
@@ -499,7 +531,7 @@ async function fetchMarkets() {
  * ============================================================ */
 async function fetchFX() {
   try {
-    const r = await fetch(`https://api.frankfurter.app/latest?from=USD&to=${FX_PAIRS.join(',')}`);
+    const r = await fetchTimeout(`https://api.frankfurter.app/latest?from=USD&to=${FX_PAIRS.join(',')}`);
     const j = await r.json();
     state.fx = j?.rates || {};
     cacheSet('fx', state.fx);
@@ -531,7 +563,7 @@ async function fetchTensions() {
   const q = '(Iran OR Gaza OR Houthi OR Hezbollah OR Hamas OR Israel OR UAE OR "Red Sea" OR "Saudi Arabia" OR Lebanon OR Syria OR Yemen) (strike OR attack OR missile OR drone OR clash OR military OR raid OR rocket)';
   const url = `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(q)}&mode=ArtList&maxrecords=40&format=json&sort=DateDesc&timespan=24h`;
   try {
-    const r = await fetch(url);
+    const r = await fetchTimeout(url, {}, 9000);
     if (!r.ok) throw new Error('GDELT ' + r.status);
     const j = await r.json();
     state.tensions = (j.articles || []).map((a) => ({
@@ -567,7 +599,7 @@ async function fetchAircraft() {
   const url = `https://opensky-network.org/api/states/all?lamin=${lamin}&lamax=${lamax}&lomin=${lomin}&lomax=${lomax}`;
   let j;
   try {
-    const r = await fetch(url, { cache: 'no-store' });
+    const r = await fetchTimeout(url, { cache: 'no-store' }, 9000);
     if (!r.ok) throw new Error('OpenSky ' + r.status);
     j = await r.json();
   } catch (e1) {
@@ -589,44 +621,66 @@ async function fetchAircraft() {
  * Response shape: { ICAO: [ { ... }, ... ], ... }
  * ============================================================ */
 async function fetchNotams() {
+  const out = [];
+
+  // Pass 1: AviationAPI with ICAO codes (FAA data — may not carry international NOTAMs,
+  // but worth trying; if FAA proxies an ICAO entry it'll show up here).
   const url = `https://api.aviationapi.com/v1/notams?apt=${NOTAM_AIRPORTS.join(',')}`;
   let j;
   try {
-    const r = await fetch(url);
-    if (!r.ok) throw new Error('AviationAPI ' + r.status);
-    j = await r.json();
-  } catch (e1) {
-    try {
-      const r = await proxyFetch(url);
-      j = await r.json();
-    } catch (e2) {
-      console.warn('[notam]', e1.message, '|', e2.message);
-      state.notams = [];
-      return;
-    }
+    const r = await fetchTimeout(url, {}, 8000);
+    if (r.ok) j = await r.json();
+  } catch {}
+  if (!j) {
+    try { const r = await proxyFetch(url); j = await r.json(); } catch {}
   }
-  const out = [];
   Object.entries(j || {}).forEach(([apt, list]) => {
     if (!Array.isArray(list)) return;
     list.slice(0, 8).forEach((n) => {
-      const msg =
-        n.notam?.text ||
-        n.text ||
-        n.message ||
-        n.notam_text ||
-        (typeof n === 'string' ? n : JSON.stringify(n));
-      const id =
-        n.notam_number || n.notamNumber || n.notam?.number || n.id || '';
-      const issued =
-        n.issue_date || n.effective_date || n.issued || n.notam?.issued || '';
+      const msg = n.notam?.text || n.text || n.message || n.notam_text ||
+                  (typeof n === 'string' ? n : JSON.stringify(n));
+      const id  = n.notam_number || n.notamNumber || n.notam?.number || n.id || '';
+      const issued = n.issue_date || n.effective_date || n.issued || n.notam?.issued || '';
       out.push({
         apt,
         id: String(id).slice(0, 40),
         msg: String(msg).replace(/\s+/g, ' ').trim().slice(0, 360),
         issued: String(issued).slice(0, 24),
+        src: 'FAA via AviationAPI',
+        url: '',
       });
     });
   });
+
+  // Pass 2 (fallback): Google News query for airspace / NOTAM / overflight news in GCC.
+  // Triggered any time we don't yet have at least 5 items — gives the user useful
+  // operational context even when the FAA international NOTAM proxy is empty.
+  if (out.length < 5) {
+    const gnUrl = 'https://news.google.com/rss/search?q=' +
+      encodeURIComponent('(NOTAM OR airspace OR "flight restriction" OR "no-fly" OR "overflight" OR diversion) (Dubai OR "Abu Dhabi" OR Doha OR Riyadh OR Jeddah OR Bahrain OR Kuwait OR Muscat OR Sharjah OR Dammam OR UAE OR Qatar OR Oman OR GCC OR Hormuz)') +
+      '&when:7d&hl=en-US&gl=US&ceid=US:en';
+    try {
+      const r = await proxyFetch(gnUrl);
+      const text = await r.text();
+      const items = parseRSS(text, { id: 'gcc-airspace', name: 'GCC AIRSPACE NEWS', region: 'GCC', lang: 'en' });
+      items.slice(0, 25).forEach((it) => {
+        // Guess airport tag from headline
+        let apt = 'GCC';
+        for (const [code, name] of Object.entries(NOTAM_AIRPORT_NAMES)) {
+          if (new RegExp('\\b' + name + '\\b', 'i').test(it.title)) { apt = code; break; }
+        }
+        out.push({
+          apt,
+          id: '',
+          msg: it.title,
+          issued: it.date.toISOString().slice(0, 10),
+          src: it.source || 'Wire',
+          url: it.link,
+        });
+      });
+    } catch {}
+  }
+
   state.notams = out;
   cacheSet('notams', state.notams);
 }
@@ -951,16 +1005,22 @@ function renderNotams() {
     const c = $('#notam-count'); if (c) c.textContent = '';
     return;
   }
-  el.innerHTML = state.notams.slice(0, 60).map((n) => `
-    <div class="notam-row">
-      <div class="notam-head">
-        <span class="notam-apt">${escapeHtml(n.apt)}</span>
-        ${n.id ? `<span class="notam-id">${escapeHtml(n.id)}</span>` : ''}
-        ${n.issued ? `<span class="notam-date">${escapeHtml(n.issued)}</span>` : ''}
+  el.innerHTML = state.notams.slice(0, 60).map((n) => {
+    const msgHtml = n.url
+      ? `<a href="${escapeHtml(n.url)}" target="_blank" rel="noopener" style="color:var(--white)">${escapeHtml(n.msg)}</a>`
+      : escapeHtml(n.msg);
+    return `
+      <div class="notam-row">
+        <div class="notam-head">
+          <span class="notam-apt">${escapeHtml(n.apt)}</span>
+          ${n.id ? `<span class="notam-id">${escapeHtml(n.id)}</span>` : ''}
+          ${n.issued ? `<span class="notam-date">${escapeHtml(n.issued)}</span>` : ''}
+          ${n.src ? `<span class="notam-src">${escapeHtml(n.src)}</span>` : ''}
+        </div>
+        <div class="notam-msg">${msgHtml}</div>
       </div>
-      <div class="notam-msg">${escapeHtml(n.msg)}</div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
   const c = $('#notam-count'); if (c) c.textContent = `${state.notams.length} active`;
 }
 
@@ -1676,6 +1736,74 @@ function preload() {
   });
 }
 
+/**
+ * Battlefield-style boot sequence — runs 2.5s in foreground while preload()
+ * fires every fetch in the background.
+ */
+function bootSequence() {
+  const overlay = document.getElementById('boot');
+  if (!overlay) return;
+  const log = document.getElementById('boot-log');
+  const bar = document.getElementById('boot-bar');
+  const pct = document.getElementById('boot-pct');
+  const eta = document.getElementById('boot-eta');
+
+  const phrases = [
+    'ESTABLISHING SECURE CHANNEL',
+    'AUTHENTICATING SESSION TOKEN',
+    'DECRYPTING FEED REGISTRY',
+    'SPINNING UP OSINT NODES · 22 SOURCES',
+    'INGESTING GDELT 2.0 STREAM',
+    'PINGING OPENSKY · MENA / GULF SECTOR',
+    'SYNCING TACTICAL OVERLAY · CARTODB',
+    'RESOLVING SIGINT CORRELATION',
+    'INDEXING CHOKEPOINT TELEMETRY · HRMZ',
+    'PARSING REGIONAL WIRE FEEDS',
+    'WARMING HOT CACHE · LOCALSTORAGE',
+    'CALIBRATING THREAT MATRIX',
+    'PRIMING LIVE BROADCAST CHANNELS',
+    'TERMINAL READY · STANDBY',
+  ];
+
+  const total = 2500;
+  const t0 = performance.now();
+  const stagger = total / phrases.length;
+
+  phrases.forEach((p, i) => {
+    setTimeout(() => {
+      const row = document.createElement('div');
+      row.className = 'boot-row';
+      row.innerHTML =
+        `<span class="b-arrow">▸</span>` +
+        `<span class="b-msg">${p}</span>` +
+        `<span class="b-stat">··</span>`;
+      log.appendChild(row);
+      log.scrollTop = log.scrollHeight;
+      setTimeout(() => {
+        const stat = row.querySelector('.b-stat');
+        if (!stat) return;
+        stat.textContent = i === phrases.length - 1 ? 'GO' : 'OK';
+        stat.className = 'b-stat ok';
+      }, Math.min(stagger * 0.7, 220));
+    }, i * stagger);
+  });
+
+  const tick = () => {
+    const dt = performance.now() - t0;
+    const p = Math.min(1, dt / total);
+    if (bar) bar.style.width = (p * 100).toFixed(2) + '%';
+    if (pct) pct.textContent = String(Math.floor(p * 100)).padStart(3, '0') + '%';
+    if (eta) eta.textContent = `T+${(dt / 1000).toFixed(2)}s / 2.50s`;
+    if (p < 1) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+
+  setTimeout(() => {
+    overlay.classList.add('boot-done');
+    setTimeout(() => overlay.remove(), 700);
+  }, total);
+}
+
 function init() {
   bindTabs();
   bindSearch();
@@ -1693,7 +1821,10 @@ function init() {
     if (['all','security','politics','economy'].includes(activeTab) && !state.searchActive) renderContent();
   }, 30_000);
 
+  // Boot animation runs in foreground; preload fetches in background.
+  bootSequence();
   preload();
+
   setInterval(refresh, 180_000); // 3 min full refresh
 }
 

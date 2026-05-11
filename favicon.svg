@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" fill="#000"/>
+  <!-- corner brackets, mil-spec callout -->
+  <path d="M2 2 H12 M2 2 V12" stroke="#ffaa00" stroke-width="3" fill="none"/>
+  <path d="M62 2 H52 M62 2 V12" stroke="#ffaa00" stroke-width="3" fill="none"/>
+  <path d="M2 62 H12 M2 62 V52" stroke="#ffaa00" stroke-width="3" fill="none"/>
+  <path d="M62 62 H52 M62 62 V52" stroke="#ffaa00" stroke-width="3" fill="none"/>
+  <!-- vertical bar accent -->
+  <rect x="10" y="14" width="6" height="36" fill="#00e676"/>
+  <!-- S glyph block -->
+  <path d="M22 14 H46 V22 H30 V28 H46 V50 H22 V42 H38 V36 H22 Z" fill="#ffaa00"/>
+  <!-- status dot -->
+  <circle cx="50" cy="56" r="3" fill="#ff3344"/>
+</svg>
