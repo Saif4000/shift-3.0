@@ -204,12 +204,84 @@ button { font-family: inherit; }
 }
 
 .brand {
+  position: relative;
   display: flex; align-items: center; gap: 4px;
   font-weight: 700;
   font-size: 15px;
   letter-spacing: 1.5px;
   color: var(--amber);
   white-space: nowrap;
+  cursor: help;
+  outline: none;
+}
+.brand:hover, .brand:focus { color: var(--green); }
+
+/* SHIFT-brand keyboard-shortcuts tooltip */
+.brand-tip {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 200;
+  width: 320px;
+  background: var(--bg);
+  border: 1px solid var(--amber);
+  box-shadow: 0 0 24px rgba(255,170,0,0.18), 0 0 4px rgba(255,170,0,0.45);
+  font-family: var(--mono);
+  font-weight: 400;
+  letter-spacing: 0.3px;
+  font-size: 11px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition: opacity .14s, transform .14s;
+}
+.brand:hover .brand-tip,
+.brand:focus .brand-tip,
+.brand-tip:hover { opacity: 1; pointer-events: auto; transform: translateY(0); }
+
+.bt-head {
+  background: var(--bg2);
+  color: var(--amber);
+  padding: 7px 10px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  border-bottom: 1px solid var(--border);
+}
+.bt-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 10px;
+  padding: 8px 10px;
+}
+.bt-grid > kbd {
+  display: inline-block;
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  color: var(--amber);
+  padding: 1px 5px;
+  font-size: 9.5px;
+  font-family: var(--mono);
+  font-weight: 700;
+  border-radius: 0;
+  white-space: nowrap;
+  justify-self: start;
+}
+.bt-grid > span {
+  color: var(--white);
+  font-size: 10.5px;
+  letter-spacing: 0.2px;
+}
+.bt-foot {
+  border-top: 1px solid var(--border);
+  padding: 5px 10px;
+  color: var(--dim2);
+  font-size: 9px;
+  letter-spacing: 0.4px;
+  text-align: center;
+}
+@media (max-width: 520px) {
+  .brand-tip { width: 280px; left: -2px; }
 }
 .brand .logo { color: var(--green); font-size: 18px; line-height: 1; margin-right: 2px; }
 .brand .ver  { color: var(--dim); font-weight: 400; margin-left: 4px; font-size: 11px; }
