@@ -107,6 +107,8 @@ const SOURCES = [
   { id: 'ncema',    name: 'NCEMA UAE',           url: 'https://news.google.com/rss/search?q=NCEMA+OR+%22National+Emergency+Crisis%22+UAE&when:3d&hl=en-US&gl=US&ceid=US:en', region: 'AE-GOV', lang: 'en' },
   { id: 'adpolice', name: 'Abu Dhabi Police',    url: 'https://news.google.com/rss/search?q=%22Abu+Dhabi+Police%22+OR+ADPoliceHQ&when:3d&hl=en-US&gl=US&ceid=US:en', region: 'AE-POL', lang: 'en' },
   { id: 'dubaipol', name: 'Dubai Police',        url: 'https://news.google.com/rss/search?q=%22Dubai+Police%22+OR+DubaiPoliceHQ&when:3d&hl=en-US&gl=US&ceid=US:en', region: 'AE-POL', lang: 'en' },
+  { id: 'forsan',   name: 'Forsan UAE',           url: 'https://rsshub.app/instagram/user/forsan_emirates',                                                                                       region: 'AE-MOD', lang: 'en' },
+  { id: 'forsan-gn',name: 'Forsan via news',      url: 'https://news.google.com/rss/search?q=%22Forsan%22+(UAE+OR+Emirates+OR+military)&when:3d&hl=en-US&gl=US&ceid=US:en',                       region: 'AE-MOD', lang: 'en' },
   { id: 'rt-me',   name: 'Reuters MENA',      url: 'https://news.google.com/rss/search?q=site:reuters.com+(Israel+OR+Iran+OR+Gulf+OR+Saudi+OR+UAE+OR+Gaza)+when:1d&hl=en-US&gl=US&ceid=US:en', region: 'WIRE', lang: 'en' },
   { id: 'bbc-me',  name: 'BBC Middle East',   url: 'https://feeds.bbci.co.uk/news/world/middle_east/rss.xml',  region: 'REG',  lang: 'en' },
   { id: 'alar',    name: 'Al Arabiya (AR)',   url: 'https://www.alarabiya.net/.mrss/ar.xml',                   region: 'SA',   lang: 'ar' },
@@ -229,31 +231,31 @@ const CHOKEPOINTS = [
  * Each channel's live stream is embedded directly; if it isn't live at a
  * given moment YouTube returns its standard "no current live stream" tile. */
 /**
- * Verified 24/7 stable video IDs (cross-referenced via Reddit, iptv-org, the
- * Grafana News Monitoring Dashboards repo, and react-livestream community
- * lists — as of May 2026).
- * Video-ID embeds are more reliable than channel-live-stream embeds because
- * networks sometimes publish a second concurrent stream that the channel-embed
- * picks up by mistake (placeholders/premieres).
+ * LIVE roster — Bloomberg first, GCC/Mideast second, then global.
+ * Using channel-live-stream embed URLs (not hardcoded video IDs) because the
+ * IDs rotate every few months and break the embed. The channel URL always
+ * picks up whatever the channel is currently streaming live.
  */
 const LIVE_CHANNELS = [
-  { videoId: 'gCNeDWCI0vo', channelId: 'UCNye-wNBqNL5ZzHSJj3l8Bg', name: 'AL JAZEERA EN', desk: 'DOHA · QA' },
-  { videoId: 'oJUvTVdTMyY', channelId: 'UCoMdktPbSTixAyNGwb-UYkQ', name: 'SKY NEWS',      desk: 'LONDON · UK' },
-  { videoId: 'Ap-UM1O9RBU', channelId: 'UCQfwfsi5VrQ8yKZ-UWmAEFg', name: 'FRANCE 24 EN',  desk: 'PARIS · FR' },
-  { videoId: 'tZT2MCYu6Zw', channelId: 'UCknLrEdhRCp1aegoMqRaCZg', name: 'DW NEWS',       desk: 'BERLIN · DE' },
-  // Bloomberg Originals (Quicktake) — the actual 24/7 simulcast, NOT 'Bloomberg Television'.
-  { videoId: 'DxmDPrfinXY', channelId: 'UCUMZ7gohGI9HcU9VNsr2FJQ', name: 'BLOOMBERG',     desk: 'NEW YORK · US' },
-  { videoId: 'XnG6kabv49U', channelId: 'UCeY0bbntWzzVIaj2z3QigXg', name: 'NBC NEWS NOW',  desk: 'NEW YORK · US' },
-  { videoId: 'M6JwB3bbBC0', channelId: 'UCBi2mrWuNuyYy4gbM6fU18Q', name: 'ABC NEWS LIVE', desk: 'NEW YORK · US' },
-  { videoId: 'pykpO5kQJ98', channelId: 'UCSEuCFmVCknxKxAjEpC6Y4Q', name: 'EURONEWS EN',   desk: 'LYON · FR' },
-  { videoId: 's-5FP3oYYas', channelId: 'UC7fWeaHhqgM4Ry-RMpM2YYw', name: 'TRT WORLD',     desk: 'ISTANBUL · TR' },
-  { videoId: 'XWq5kBlakcQ', channelId: 'UCp9aJfYHTrIaXa5HSnRMBpQ', name: 'CNA',           desk: 'SINGAPORE · SG' },
-  { videoId: 'f0lYkdA-Gtw', channelId: 'UCSPEjw8F2nQDtmUKPFNF7_A', name: 'NHK WORLD',     desk: 'TOKYO · JP' },
+  // Bloomberg first (user request) — Bloomberg TV main channel
+  { channelId: 'UCIALMKvObZNtJ6AmdCLP7Lg', name: 'BLOOMBERG TV',   desk: 'NEW YORK · US' },
+  // GCC / Middle East
+  { channelId: 'UCNye-wNBqNL5ZzHSJj3l8Bg', name: 'AL JAZEERA EN',  desk: 'DOHA · QA' },
+  { channelId: 'UCsLcwjY6V1c0kdmAFwlNxgw', name: 'AL ARABIYA EN',  desk: 'DUBAI · AE' },
+  { channelId: 'UC68Mz_kS2dVCpYTtmiuwo3w', name: 'AL HADATH',      desk: 'RIYADH · SA (AR)' },
+  { channelId: 'UCfFR8Tt0nnnT-tQp3JEdh7g', name: 'I24 NEWS EN',    desk: 'TEL AVIV · IL' },
+  // EU + Turkey
+  { channelId: 'UCQfwfsi5VrQ8yKZ-UWmAEFg', name: 'FRANCE 24 EN',   desk: 'PARIS · FR' },
+  { channelId: 'UCoMdktPbSTixAyNGwb-UYkQ', name: 'SKY NEWS',       desk: 'LONDON · UK' },
+  { channelId: 'UCknLrEdhRCp1aegoMqRaCZg', name: 'DW NEWS',        desk: 'BERLIN · DE' },
+  { channelId: 'UC7fWeaHhqgM4Ry-RMpM2YYw', name: 'TRT WORLD',      desk: 'ISTANBUL · TR' },
+  // US
+  { channelId: 'UCBi2mrWuNuyYy4gbM6fU18Q', name: 'ABC NEWS LIVE',  desk: 'NEW YORK · US' },
+  { channelId: 'UCeY0bbntWzzVIaj2z3QigXg', name: 'NBC NEWS NOW',   desk: 'NEW YORK · US' },
+  // Asia
+  { channelId: 'UC_gUM8rL-Lrg6O3adPW9K1g', name: 'WION',           desk: 'NEW DELHI · IN' },
 ];
 
-/** Render the first N tiles as live iframes; rest show poster thumbnails
- *  until clicked. Avoids Chrome decoder throttling with many concurrent live
- *  streams (community guidance: max ~4 active). */
 const LIVE_AUTO_LOAD = 4;
 
 /* ============================================================
@@ -466,8 +468,17 @@ async function translate(text, from = 'ar', to = 'en') {
 async function fetchSource(src) {
   state.sourceStatus[src.id] = { status: 'wait', count: 0, name: src.name };
   try {
-    const r = await proxyFetch(src.url);
-    const text = await r.text();
+    // 1) Server-side /api/news (browser UA, edge-cached) — most reliable
+    let text = '';
+    try {
+      const r = await fetchTimeout(`/api/news?url=${encodeURIComponent(src.url)}`, {}, 9000);
+      if (r.ok) text = await r.text();
+    } catch {}
+    // 2) Public-proxy fallback (only if server-side returned nothing)
+    if (!text || text.length < 80) {
+      const r = await proxyFetch(src.url);
+      text = await r.text();
+    }
     let items = parseRSS(text, src).slice(0, 15);
 
     if (src.lang === 'ar') {
@@ -1263,26 +1274,25 @@ function renderLive() {
   if (grid.dataset.rendered) return;
   const origin = encodeURIComponent(location.origin);
 
-  const embedUrl = (videoId) =>
-    `https://www.youtube-nocookie.com/embed/${videoId}` +
-    `?autoplay=1&mute=1&playsinline=1&controls=1&enablejsapi=1&rel=0&modestbranding=1&origin=${origin}`;
-  const thumbUrl = (videoId) =>
-    `https://i.ytimg.com/vi/${videoId}/hqdefault_live.jpg`;
+  // channel-live-stream URL — auto-picks the channel's CURRENT live broadcast.
+  // Avoids stale hardcoded video IDs that rotate every few months.
+  const embedUrl = (channelId) =>
+    `https://www.youtube-nocookie.com/embed/live_stream?channel=${channelId}` +
+    `&autoplay=1&mute=1&playsinline=1&controls=1&enablejsapi=1&rel=0&modestbranding=1&origin=${origin}`;
 
   grid.innerHTML = LIVE_CHANNELS.map((ch, i) => {
     const liveNow = i < LIVE_AUTO_LOAD;
     const body = liveNow
-      ? `<iframe src="${embedUrl(ch.videoId)}"
+      ? `<iframe src="${embedUrl(ch.channelId)}"
                  allow="autoplay; encrypted-media; picture-in-picture"
                  allowfullscreen loading="lazy"></iframe>
          <div class="lt-mute-overlay">MUTED · CLICK FOR AUDIO</div>`
-      : `<img class="lt-thumb" src="${thumbUrl(ch.videoId)}" loading="lazy"
-              alt="${escapeHtml(ch.name)}"
-              onerror="this.style.display='none'" />
-         <div class="lt-play-overlay">▶ TAP TO STREAM</div>`;
+      : `<div class="lt-stub">
+           <div class="lt-stub-name">${escapeHtml(ch.name)}</div>
+           <div class="lt-stub-cta">▶ TAP TO STREAM</div>
+         </div>`;
     return `
       <div class="live-tile"
-           data-video="${ch.videoId}"
            data-channel="${ch.channelId}"
            data-muted="1"
            data-loaded="${liveNow ? '1' : '0'}">
@@ -1325,10 +1335,10 @@ function renderLive() {
     }
   };
   const loadTile = (tile) => {
-    const videoId = tile.dataset.video;
+    const channelId = tile.dataset.channel;
     const frame = tile.querySelector('.lt-frame');
     frame.innerHTML =
-      `<iframe src="${embedUrl(videoId)}"
+      `<iframe src="${embedUrl(channelId)}"
                allow="autoplay; encrypted-media; picture-in-picture"
                allowfullscreen></iframe>
        <div class="lt-mute-overlay">MUTED · CLICK FOR AUDIO</div>`;
@@ -1662,8 +1672,20 @@ function moveFocus(delta) {
 /* ============================================================
  * KEYBOARD SHORTCUTS
  * ============================================================ */
-const TAB_ORDER = ['all','security','politics','economy','ai','markets','map','live','tensions','sources'];
-const TAB_LETTERS = { a: 'all', s: 'security', p: 'politics', e: 'economy', i: 'ai', m: 'markets', v: 'map', l: 'live', t: 'tensions' };
+const TAB_ORDER = ['all','uae-gov','security','politics','economy','ai','markets','map','live','tensions','sources'];
+const TAB_LETTERS = { a: 'all', u: 'uae-gov', s: 'security', p: 'politics', e: 'economy', i: 'ai', m: 'markets', v: 'map', l: 'live', t: 'tensions' };
+
+/* Sources that belong to the UAE GOV tab (also matched by region prefix 'AE-') */
+const UAE_GOV_SOURCE_IDS = new Set([
+  'wam', 'modgovae', 'moiuae', 'mofa-ae', 'uaegov', 'ncema',
+  'adpolice', 'dubaipol', 'barq', 'forsan', 'tn',
+]);
+function isUaeGovItem(it) {
+  if (!it) return false;
+  if (UAE_GOV_SOURCE_IDS.has(it.sourceId)) return true;
+  if (typeof it.region === 'string' && it.region.startsWith('AE')) return true;
+  return false;
+}
 
 function bindKeyboard() {
   document.addEventListener('keydown', (ev) => {
@@ -1778,7 +1800,9 @@ function renderContent() {
   }
 
   let items = state.items;
-  if (activeTab !== 'all') {
+  if (activeTab === 'uae-gov') {
+    items = items.filter(isUaeGovItem);
+  } else if (activeTab !== 'all') {
     items = items.filter((i) => i.tags.includes(activeTab));
   }
 

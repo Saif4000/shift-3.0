@@ -886,27 +886,30 @@ body.fetching .dataflow {
 }
 .lt-frame { position: relative; padding-bottom: 56.25%; height: 0; background: #000; overflow: hidden; }
 .lt-frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
-.lt-thumb {
-  position: absolute; inset: 0;
-  width: 100%; height: 100%;
-  object-fit: cover;
-  background: var(--bg2);
-  filter: brightness(0.7) saturate(0.85);
-}
-.lt-play-overlay {
+.lt-stub {
   position: absolute; inset: 0;
   display: flex; align-items: center; justify-content: center;
-  flex-direction: column; gap: 4px;
+  flex-direction: column; gap: 10px;
+  cursor: pointer;
+  background:
+    repeating-linear-gradient(45deg, #0a0a0a 0 10px, #0e0e0e 10px 20px);
+  transition: background .15s;
+}
+.lt-stub:hover { background: repeating-linear-gradient(45deg, #0e0e0e 0 10px, #161616 10px 20px); }
+.lt-stub-name {
   color: var(--amber);
+  font-size: 16px;
   font-weight: 700;
   letter-spacing: 2px;
-  font-size: 14px;
-  text-shadow: 0 0 8px #000, 0 0 2px #000;
-  cursor: pointer;
-  background: radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.55) 80%);
-  transition: color .12s;
+  text-shadow: 0 0 6px rgba(255,170,0,0.3);
 }
-.live-tile[data-loaded="0"]:hover .lt-play-overlay { color: var(--green); }
+.lt-stub-cta {
+  color: var(--dim);
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  font-weight: 700;
+}
+.live-tile[data-loaded="0"]:hover .lt-stub-cta { color: var(--green); }
 
 .lt-mute-overlay {
   position: absolute; inset: 0;
