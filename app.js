@@ -590,6 +590,46 @@ async function fetchMarkets() {
   cacheSet('markets', state.markets);
 }
 
+/**
+ * Pull live oil spot prices from our /api/oil edge function (which proxies
+ * OilPriceAPI server-side so the API key never reaches the browser). Overlays
+ * the spot price on top of whatever Yahoo/Stooq already returned — keeps
+ * Yahoo's % change. Silently no-ops if the env var isn't set (503).
+ */
+async function fetchOilPriceAPI() {
+  try {
+    const r = await fetchTimeout('/api/oil', {}, 9000);
+    if (!r.ok) {
+      state.oilApiStatus = r.status === 503 ? 'no-key' : 'err';
+      return;
+    }
+    const j = await r.json();
+    if (!j.ok || !Array.isArray(j.results)) { state.oilApiStatus = 'err'; return; }
+    let applied = 0;
+    j.results.forEach((entry) => {
+      if (entry.price == null || isNaN(entry.price)) return;
+      const k = entry.localKey;
+      const existing = state.markets[k] || {};
+      state.markets[k] = {
+        ...existing,
+        price: entry.price,
+        label: existing.label || entry.label,
+        unit:  existing.unit  || entry.unit,
+        group: 'energy',
+        opa: true,
+      };
+      applied++;
+    });
+    state.oilApiStatus = applied > 0 ? 'ok' : 'empty';
+    renderTicker();
+    if (activeTab === 'markets' && !state.searchActive) renderContent();
+    cacheSet('markets', state.markets);
+  } catch (e) {
+    state.oilApiStatus = 'err';
+    console.warn('[oil-api]', e.message);
+  }
+}
+
 /* ============================================================
  * FX — Frankfurter (native CORS, no key)
  * ============================================================ */
@@ -1549,7 +1589,7 @@ function bindContentClicks() {
 }
 
 function renderMarketsView() {
-  const card = (label, value, change, unit, pct) => {
+  const card = (label, value, change, unit, pct, badge) => {
     const has = value != null && !isNaN(value);
     const dir = (pct ?? 0) >= 0 ? 'up' : 'down';
     const arr = (pct ?? 0) >= 0 ? '▲' : '▼';
@@ -1558,7 +1598,7 @@ function renderMarketsView() {
       : (pct != null ? `${arr} ${fmtNum(Math.abs(pct), 2)}%` : '—');
     return `
       <div class="mcard ${has ? dir : ''}">
-        <div class="ml">${escapeHtml(label)}</div>
+        <div class="ml">${escapeHtml(label)}${badge ? ` <span class="mbadge">${badge}</span>` : ''}</div>
         <div class="mv">${has ? (unit || '') + fmtNum(value) : '—'}</div>
         <div class="mc">${has ? cTxt : ''}</div>
       </div>
@@ -1567,17 +1607,17 @@ function renderMarketsView() {
 
   const energy = STOOQ_TICKERS.filter((t) => t.group === 'energy').map((t) => {
     const m = state.markets[t.sym] || {};
-    return card(t.label, m.price, m.change, t.unit, m.pct);
+    return card(t.label, m.price, m.change, t.unit, m.pct, m.opa ? 'OPA' : null);
   }).join('');
 
   const metals = STOOQ_TICKERS.filter((t) => t.group === 'metals').map((t) => {
     const m = state.markets[t.sym] || {};
-    return card(t.label, m.price, m.change, t.unit, m.pct);
+    return card(t.label, m.price, m.change, t.unit, m.pct, m.opa ? 'OPA' : null);
   }).join('');
 
   const indices = STOOQ_TICKERS.filter((t) => t.group === 'index' || t.group === 'fx').map((t) => {
     const m = state.markets[t.sym] || {};
-    return card(t.label, m.price, m.change, t.unit, m.pct);
+    return card(t.label, m.price, m.change, t.unit, m.pct, m.opa ? 'OPA' : null);
   }).join('');
 
   const fx = Object.entries(state.fx).map(([c, v]) =>
@@ -1740,7 +1780,8 @@ function renderSourcesView() {
     <div class="src-grid">${rows}</div>
     <div class="section-head">DATA ENDPOINTS</div>
     <div class="src-grid">
-      <div class="src-row"><span class="sname">Stooq CSV (commodities · indices · DXY)</span><span class="scount">${Object.keys(state.markets).length}/${STOOQ_TICKERS.length}</span><span class="sstatus ${Object.keys(state.markets).length ? 'ok' : 'err'}">${Object.keys(state.markets).length ? 'OK' : 'ERR'}</span></div>
+      <div class="src-row"><span class="sname">Yahoo Finance / Stooq fallback (commodities · indices · DXY)</span><span class="scount">${Object.keys(state.markets).length}/${STOOQ_TICKERS.length}</span><span class="sstatus ${Object.keys(state.markets).length ? 'ok' : 'err'}">${Object.keys(state.markets).length ? 'OK' : 'ERR'}</span></div>
+      <div class="src-row"><span class="sname">OilPriceAPI (spot · server-side proxy /api/oil)</span><span class="scount">${state.oilApiStatus === 'ok' ? 'live' : state.oilApiStatus === 'no-key' ? 'no key' : (state.oilApiStatus || 'wait')}</span><span class="sstatus ${state.oilApiStatus === 'ok' ? 'ok' : state.oilApiStatus === 'no-key' ? 'wait' : 'err'}">${state.oilApiStatus === 'ok' ? 'OK' : state.oilApiStatus === 'no-key' ? 'SET ENV' : (state.oilApiStatus || 'WAIT').toUpperCase()}</span></div>
       <div class="src-row"><span class="sname">Frankfurter (FX vs USD)</span><span class="scount">${Object.keys(state.fx).length} pairs</span><span class="sstatus ${Object.keys(state.fx).length ? 'ok' : 'err'}">${Object.keys(state.fx).length ? 'OK' : 'ERR'}</span></div>
       <div class="src-row"><span class="sname">CoinGecko (crypto)</span><span class="scount">${Object.keys(state.crypto).length} assets</span><span class="sstatus ${Object.keys(state.crypto).length ? 'ok' : 'err'}">${Object.keys(state.crypto).length ? 'OK' : 'ERR'}</span></div>
       <div class="src-row"><span class="sname">GDELT 2.0 (tension monitor)</span><span class="scount">${state.tensions.length} articles</span><span class="sstatus ${state.tensions.length ? 'ok' : 'wait'}">${state.tensions.length ? 'OK' : 'WAIT'}</span></div>
@@ -1780,6 +1821,7 @@ async function refresh() {
       updateFooter();
     }),
     fetchMarkets().then(renderTicker),
+    fetchOilPriceAPI(),
     fetchFX().then(() => {
       renderTicker();
       renderStatusStrip();
@@ -1837,6 +1879,7 @@ function preload() {
       updateFooter();
     }),
     fetchMarkets().then(renderTicker),
+    fetchOilPriceAPI(),  // overlays oil spot prices when key is configured
     fetchFX().then(() => { renderTicker(); renderStatusStrip(); }),
     fetchCrypto().then(() => { renderTicker(); renderStatusStrip(); }),
     fetchTensions().then(() => { if (activeTab === 'tensions') renderContent(); }),

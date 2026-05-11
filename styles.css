@@ -488,6 +488,17 @@ button { font-family: inherit; }
 .mcard.up   .mc { color: var(--green); }
 .mcard.down .mc { color: var(--red);   }
 .mcard .mn { color: var(--dim2); font-size: 9px; }
+.mbadge {
+  display: inline-block;
+  background: var(--green);
+  color: #000;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  padding: 0 4px;
+  margin-left: 4px;
+  vertical-align: middle;
+}
 
 /* ============= SOURCES VIEW ============= */
 .src-grid { padding: 12px; }
