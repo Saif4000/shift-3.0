@@ -917,11 +917,37 @@ function tkChip(label, unit, price, pct) {
   return `<span class="tk"><b>${label}</b>${unit}${has ? fmtNum(price) : '—'}<span class="${cls}">${pctTxt}</span></span>`;
 }
 
-function buildLane(parts, fallback) {
-  if (!parts.length) return `<span class="tk">${fallback}</span>`;
-  const joined = parts.join('<span class="sep">·</span>');
-  // duplicate content for seamless loop
-  return joined + '<span class="sep">·</span>' + joined;
+/**
+ * Fill a ticker lane with N copies of the content, where N is computed from
+ * the lane's actual viewport width. Guarantees the -50% marquee animation
+ * always has content extending past the right edge, so when the loop
+ * restarts the next copy is already there — no gap, just repeat.
+ * Animation duration is set on the element so perceived scroll speed stays
+ * constant regardless of how many copies were needed.
+ */
+function fillLane(elId, parts, fallback) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  if (!parts || !parts.length) {
+    el.innerHTML = `<span class="tk">${escapeHtml(fallback)}</span>`;
+    el.style.animationDuration = '60s';
+    return;
+  }
+  const segment = parts.join('<span class="sep">·</span>') + '<span class="sep">·</span>';
+  // Pass 1 — measure a single segment's natural width
+  el.innerHTML = segment;
+  // Read scrollWidth (forces a synchronous layout pass)
+  const oneWidth = el.scrollWidth || 200;
+  const lane = el.parentElement;
+  const viewWidth = ((lane && lane.clientWidth) || window.innerWidth || 1200) - 50; // minus label
+  // Want total content ≥ ~2.2× viewport so the loop is seamless even if
+  // the lane is on a wide desktop monitor.
+  const copies = Math.max(2, Math.ceil((viewWidth * 2.2) / oneWidth));
+  el.innerHTML = segment.repeat(copies);
+  // Keep scroll speed roughly constant — ~55 px/sec across all configurations
+  const totalScrollPx = (copies * oneWidth) * 0.5; // matches CSS translateX(-50%)
+  const dur = Math.max(20, Math.round(totalScrollPx / 55));
+  el.style.animationDuration = `${dur}s`;
 }
 
 function renderTicker() {
@@ -931,10 +957,9 @@ function renderTicker() {
     const m = state.markets[sym]; if (!m) return null;
     return tkChip(m.label, m.unit, m.price, m.pct);
   }).filter(Boolean);
-  const oilEl = $('#ticker-oil');
-  if (oilEl) oilEl.innerHTML = buildLane(oilParts, 'ENERGY · LOADING');
+  fillLane('ticker-oil', oilParts, 'ENERGY · LOADING');
 
-  // ---- LANE 2 · CRYPTO + FX + INDICES (alternating direction) ----
+  // ---- LANE 2 · CRYPTO + FX + INDICES ----
   const cryptoParts = Object.entries(state.crypto).map(([id, v]) => {
     const lbl = id === 'bitcoin' ? 'BTC' : id === 'ethereum' ? 'ETH' : id.toUpperCase();
     const pct = v.usd_24h_change ?? 0;
@@ -950,8 +975,7 @@ function renderTicker() {
     .filter((c) => state.fx[c] != null)
     .map((cur) => `<span class="tk"><b>USD/${cur}</b>${fmtNum(state.fx[cur], 4)}</span>`);
   const combined = [...cryptoParts, ...idxParts, ...fxParts];
-  const fxEl = $('#ticker-fx');
-  if (fxEl) fxEl.innerHTML = buildLane(combined, 'CRYPTO · FX · LOADING');
+  fillLane('ticker-fx', combined, 'CRYPTO · FX · LOADING');
 }
 
 /* ============================================================
@@ -2420,6 +2444,14 @@ function init() {
   setInterval(() => {
     if (['all','security','politics','economy'].includes(activeTab) && !state.searchActive) renderContent();
   }, 30_000);
+
+  // Re-fill ticker lanes on window resize so the copy count adapts to the
+  // new viewport width — keeps the loop seamless across breakpoints.
+  let resizeTimer = null;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(renderTicker, 250);
+  });
 
   // Boot animation runs in foreground; preload fetches in background.
   bootSequence();
