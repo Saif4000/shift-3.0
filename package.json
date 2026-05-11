@@ -3,9 +3,5 @@
   "version": "2.0.0",
   "description": "SHIFT 2.0 — regional intelligence terminal. News, markets, tactical map, NOTAMs, live broadcasts.",
   "private": true,
-  "type": "module",
-  "scripts": {
-    "build": "echo 'Static site — nothing to build'",
-    "vercel-build": "echo 'Static site — nothing to build'"
-  }
+  "type": "module"
 }
