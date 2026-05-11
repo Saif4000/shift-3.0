@@ -896,7 +896,9 @@ async function fetchAircraft() {
       if (j.ok && Array.isArray(j.states)) {
         state.aircraft = j.states.filter((s) => s[5] != null && s[6] != null);
         state.aircraftFetchedAt = Date.now();
+        state.aircraftSource = j.source || 'aircraft';
         cacheSet('aircraft', { at: Date.now(), preset: activePreset, states: state.aircraft });
+        updateAircraftCount();
         return;
       }
     }
@@ -1190,8 +1192,10 @@ function initMapOnce() {
   }).addTo(leafletMap);
 
   // ---- Layer panes for explicit z-ordering (per SITAWARE convention) ----
-  // base 200 → overlay 400 → rings 500 → quakes 540 → infra 550 →
+  // base 200 → overlay 400 → cables 500 → sigmet 520 → quakes 540 →
   // tracks 600 → aircraft 650 → HUD 700+
+  leafletMap.createPane('cablesPane').style.zIndex   = '500';
+  leafletMap.createPane('sigmetPane').style.zIndex   = '520';
   leafletMap.createPane('quakesPane').style.zIndex   = '540';
   leafletMap.createPane('tracksPane').style.zIndex   = '600';
   leafletMap.createPane('aircraftPane').style.zIndex = '650';
@@ -1243,30 +1247,40 @@ function initMapOnce() {
   // ---- AIR/SEA mode toggle ----
   bindMapMode();
 
-  // ---- Mouse position → HUD DTG ----
+  // ---- Mouse position → HUD DTG (+ MGRS readout if mgrs lib available) ----
   leafletMap.on('mousemove', (e) => {
-    const lat = e.latlng.lat.toFixed(2);
-    const lon = e.latlng.lng.toFixed(2);
-    const dtg = $('#hud-dtg'); if (dtg) dtg.textContent = `${lat}° · ${lon}°`;
+    const lat = e.latlng.lat;
+    const lon = e.latlng.lng;
+    const dtg = $('#hud-dtg'); if (!dtg) return;
+    let mgrsStr = '';
+    if (typeof window.mgrs !== 'undefined' && window.mgrs.forward) {
+      try { mgrsStr = window.mgrs.forward([lon, lat], 4); } catch {}
+    }
+    dtg.textContent = mgrsStr
+      ? `${lat.toFixed(2)}° · ${lon.toFixed(2)}° · ${mgrsStr}`
+      : `${lat.toFixed(2)}° · ${lon.toFixed(2)}°`;
   });
 
   // ---- Airport + mil-base overlays (rendered once) ----
   renderAirportsAndBases();
 
-  // ---- USGS earthquakes (last 24h, no key) ----
-  fetchAndRenderQuakes();
+  // ---- SITAWARE overlays ----
+  renderCables();              // submarine cables
+  fetchAndRenderSigmets();     // NOAA aviation weather hazards
+  fetchAndRenderQuakes();      // USGS earthquakes
 
   // ---- Layer control panel — toggle each overlay on/off ----
-  // Built using native Leaflet control; sits top-left below the HUD.
   setTimeout(() => {
     const overlays = {};
-    if (civilLayer) overlays['◯ AIRPORTS · CIV'] = civilLayer;
-    if (milLayer)   overlays['■ MIL BASES']       = milLayer;
-    if (quakeLayer) overlays['◉ EARTHQUAKES 24h'] = quakeLayer;
+    if (civilLayer)     overlays['◯ AIRPORTS · CIV']     = civilLayer;
+    if (milLayer)       overlays['◆ MIL BASES']           = milLayer;
+    if (cableLayer)     overlays['~ SUB CABLES']          = cableLayer;
+    if (sigmetLayer)    overlays['⛅ SIGMETs']             = sigmetLayer;
+    if (quakeLayer)     overlays['◉ EARTHQUAKES 24h']     = quakeLayer;
     L.control.layers(null, overlays, {
       position: 'topleft', collapsed: true,
     }).addTo(leafletMap);
-  }, 1200);
+  }, 1500);
 
   // ---- Plane dead-reckoning tick — makes tracks move between fetches ----
   startPlaneTick();
@@ -1324,16 +1338,40 @@ function renderAirportsAndBases() {
   });
 
   MIL_BASES.forEach((b) => {
-    L.marker([b.lat, b.lon], {
-      icon: L.divIcon({
+    // Use NATO APP-6D mil-symbol if milsymbol library loaded; else fall back
+    // to red-square divIcon. SIDC heuristic: hostile if IRGC/IRIN/IRIAF.
+    let icon;
+    const isHostile = /IRGC|IRIN|IRIAF/i.test(b.op || '');
+    if (typeof window.ms !== 'undefined' && window.ms.Symbol) {
+      const sidc = isHostile ? 'SHGPIBA---H----' : 'SFGPIBA---H----';
+      try {
+        const sym = new window.ms.Symbol(sidc, {
+          size: 22,
+          monoColor: isHostile ? '#ff3344' : '#ffaa00',
+          fillOpacity: 0.85,
+        });
+        const sz = sym.getSize();
+        icon = L.divIcon({
+          className: 'mil-symbol',
+          html: sym.asSVG(),
+          iconSize: [sz.width, sz.height],
+          iconAnchor: [sz.width / 2, sz.height / 2],
+        });
+      } catch {}
+    }
+    if (!icon) {
+      const c = isHostile ? '#ff3344' : '#ffaa00';
+      icon = L.divIcon({
         className: 'mil-base',
         html: `<svg viewBox="0 0 14 14" width="12" height="12">` +
-              `<rect x="2" y="2" width="10" height="10" fill="rgba(255,51,68,0.22)" stroke="#ff3344" stroke-width="1.5"/>` +
-              `<path d="M2 2 L12 12 M2 12 L12 2" stroke="#ff3344" stroke-width="0.9"/>` +
+              `<rect x="2" y="2" width="10" height="10" fill="rgba(255,51,68,0.22)" stroke="${c}" stroke-width="1.5"/>` +
+              `<path d="M2 2 L12 12 M2 12 L12 2" stroke="${c}" stroke-width="0.9"/>` +
               `</svg>`,
         iconSize: [12, 12], iconAnchor: [6, 6],
-      }),
-    }).bindTooltip(`<b>${b.code}</b> · MIL · ${b.country}<br>${b.name}<br><span style="color:#5fc7ff">${b.op}</span>`, { sticky: true })
+      });
+    }
+    L.marker([b.lat, b.lon], { icon })
+      .bindTooltip(`<b>${b.code}</b> · MIL · ${b.country}<br>${b.name}<br><span style="color:#5fc7ff">${b.op}</span>`, { sticky: true })
       .addTo(milLayer);
   });
 
@@ -1385,6 +1423,82 @@ function clearTrack(icao) {
   if (line && leafletMap) leafletMap.removeLayer(line);
   trackLines.delete(icao);
   trackHistory.delete(icao);
+}
+
+/* ============================================================
+ * SUBMARINE CABLES — major routes through the Gulf / Hormuz / Red Sea.
+ * Hardcoded subset based on TeleGeography open data (MIT). Each cable is
+ * a polyline through landing points; tooltip names the cable. Cable cuts
+ * at Hormuz are a recurring escalation indicator.
+ * ============================================================ */
+const SUBMARINE_CABLES = [
+  { name:'FALCON',         color:'#5fc7ff', path:[[19.00,72.85],[24.85,67.00],[25.61,57.78],[25.11,56.32],[26.20,56.20],[25.27,51.60],[26.27,50.63],[29.23,47.97],[30.55,47.66]] },
+  { name:'SEA-ME-WE-5',    color:'#b794ff', path:[[19.00,72.85],[24.85,67.00],[25.11,56.32],[29.97,32.55],[43.30,5.40]] },
+  { name:'I-ME-WE',        color:'#00e676', path:[[19.00,72.85],[25.11,56.32],[29.97,32.55],[31.20,29.92],[43.30,5.40]] },
+  { name:'GBI · Gulf Bridge',color:'#ffaa00', path:[[25.11,56.32],[25.27,51.60],[26.27,50.63],[24.96,46.69],[26.47,49.80],[29.23,47.97],[30.55,47.66]] },
+  { name:'AAE-1',          color:'#ff6ad5', path:[[19.00,72.85],[25.11,56.32],[15.34,42.79],[29.97,32.55],[31.20,29.92],[43.30,5.40]] },
+  { name:'TEAMS',          color:'#5fc7ff', path:[[25.11,56.32],[-4.05,39.66]] },
+];
+
+let cableLayer = null;
+function renderCables() {
+  if (!leafletMap) return;
+  if (cableLayer) leafletMap.removeLayer(cableLayer);
+  cableLayer = L.layerGroup();
+  SUBMARINE_CABLES.forEach((c) => {
+    L.polyline(c.path, {
+      color: c.color,
+      weight: 1.2,
+      opacity: 0.6,
+      dashArray: '2 4',
+      interactive: true,
+      pane: 'cablesPane',
+    })
+      .bindTooltip(`<b>SUB CABLE</b> · ${escapeHtml(c.name)}`, { sticky: true })
+      .addTo(cableLayer);
+  });
+  cableLayer.addTo(leafletMap);
+}
+
+/* ============================================================
+ * NOAA AVIATION WEATHER — active SIGMETs (turbulence, convection, dust,
+ * volcanic ash). Free, no key. GeoJSON.
+ * ============================================================ */
+let sigmetLayer = null;
+async function fetchAndRenderSigmets() {
+  if (!leafletMap) return;
+  try {
+    const r = await fetchTimeout(
+      'https://aviationweather.gov/api/data/airsigmet?format=geojson',
+      {}, 9000,
+    );
+    if (!r.ok) return;
+    const j = await r.json();
+    const features = j.features || [];
+    if (sigmetLayer) leafletMap.removeLayer(sigmetLayer);
+    sigmetLayer = L.layerGroup();
+    features.forEach((f) => {
+      const p = f.properties || {};
+      const hazard = (p.hazard || '').toUpperCase();
+      const color = hazard === 'TURB' ? '#ffaa00'
+        : hazard === 'CONV' ? '#ff3344'
+        : hazard === 'ICE'  ? '#5fc7ff'
+        : hazard === 'IFR'  ? '#b794ff'
+        : '#ff6ad5';
+      L.geoJSON(f, {
+        style: {
+          color, weight: 1.5, opacity: 0.7,
+          fillColor: color, fillOpacity: 0.07,
+          dashArray: '4 3',
+          pane: 'sigmetPane',
+        },
+      }).bindTooltip(
+        `<b>SIGMET</b> · ${escapeHtml(hazard || 'WX')}<br>${escapeHtml(p.rawAirSigmet || p.rawSigmet || '').slice(0, 200)}`,
+        { sticky: true }
+      ).addTo(sigmetLayer);
+    });
+    sigmetLayer.addTo(leafletMap);
+  } catch (e) { console.warn('[sigmets]', e.message); }
 }
 
 /* ============================================================
@@ -1577,14 +1691,30 @@ function renderAircraft() {
     }
   }
 
+  updateAircraftCount(airborne);
+}
+
+/** Count update split from marker rendering so the headline reflects the
+ *  fetched data even before the user opens the MAP tab. */
+function updateAircraftCount(airborneOverride) {
+  const total = state.aircraft?.length || 0;
+  const airborne = airborneOverride != null
+    ? airborneOverride
+    : (state.aircraft || []).filter((s) => s && !s[8]).length;
+  const src = state.aircraftSource || '—';
   const el = $('#plane-count');
-  if (el) el.textContent = `${airborne} airborne · ${state.aircraft.length} total · ${activePreset.toUpperCase()} box`;
+  if (el) el.textContent = total === 0
+    ? `awaiting feed…`
+    : `${airborne} airborne · ${total} states · ${activePreset.toUpperCase()} · ${src}`;
   const hud = $('#hud-airborne');
-  if (hud) hud.textContent = `${airborne} airborne / ${state.aircraft.length} states`;
+  if (hud) hud.textContent = total === 0
+    ? `— craft`
+    : `${airborne} airborne / ${total} states`;
 }
 
 function buildPlanePopup(s) {
-  const callsign = (s[1] || '').trim() || s[0];
+  const icao = s[0] || '';
+  const callsign = (s[1] || '').trim() || icao;
   const country = s[2] || '';
   const altM = s[7];
   const vel = s[9];
@@ -1593,10 +1723,22 @@ function buildPlanePopup(s) {
   const ft = altM != null ? Math.round(altM * 3.28084).toLocaleString() + ' ft' : '—';
   const kt = vel != null ? Math.round(vel * 1.94384) + ' kt' : '—';
   const climb = vr != null ? (vr > 0 ? '▲ ' : vr < 0 ? '▼ ' : '— ') + Math.abs(Math.round(vr * 196.85)) + ' fpm' : '—';
+  // Click-to-investigate links (subagent suggestion) — open ADSBExchange
+  // history + planespotters photo in new tabs.
+  const adsbX = icao
+    ? `<a href="https://globe.adsbexchange.com/?icao=${encodeURIComponent(icao)}" target="_blank" rel="noopener" style="color:#5fc7ff">▸ ADSBX</a>`
+    : '';
+  const ps = icao
+    ? `<a href="https://www.planespotters.net/hex/${encodeURIComponent(icao.toUpperCase())}" target="_blank" rel="noopener" style="color:#5fc7ff">▸ photo</a>`
+    : '';
+  const cs = callsign && callsign !== icao
+    ? `<a href="https://www.flightradar24.com/${encodeURIComponent(callsign)}" target="_blank" rel="noopener" style="color:#5fc7ff">▸ FR24</a>`
+    : '';
   return (
     `<b>${escapeHtml(callsign)}</b><br>` +
-    `<span style="color:#5fc7ff">${escapeHtml(country)}</span><br>` +
-    `ALT ${ft}<br>SPD ${kt}<br>HDG ${hdg != null ? Math.round(hdg) + '°' : '—'}<br>V/S ${climb}`
+    `<span style="color:#5fc7ff">${escapeHtml(country)}</span> · ${escapeHtml(icao)}<br>` +
+    `ALT ${ft}<br>SPD ${kt}<br>HDG ${hdg != null ? Math.round(hdg) + '°' : '—'}<br>V/S ${climb}` +
+    `<div style="margin-top:6px;padding-top:6px;border-top:1px solid #2a2a2a;display:flex;gap:8px;flex-wrap:wrap">${adsbX} ${ps} ${cs}</div>`
   );
 }
 
@@ -2474,6 +2616,18 @@ function updateFooter() {
     : 'never';
 }
 
+/** Refresh-countdown ticker — shown in footer, updated every second. */
+function updateRefreshCountdown() {
+  const el = $('#next-update');
+  if (!el) return;
+  if (!state.nextRefreshAt) { el.textContent = 'next in —'; return; }
+  const remaining = Math.max(0, state.nextRefreshAt - Date.now());
+  if (remaining <= 0) { el.textContent = 'next: imminent'; return; }
+  const mins = Math.floor(remaining / 60000);
+  const secs = Math.floor((remaining % 60000) / 1000);
+  el.textContent = `next in ${mins}m ${String(secs).padStart(2,'0')}s`;
+}
+
 let refreshing = false;
 async function refresh() {
   if (refreshing) return;
@@ -2503,6 +2657,7 @@ async function refresh() {
   ]);
 
   state.lastUpdate = new Date();
+  state.nextRefreshAt = Date.now() + 180_000;
   updateFooter();
   $('#refresh').classList.remove('spin');
   refreshing = false;
@@ -2673,6 +2828,7 @@ function preload() {
     })),
   ]).then(() => {
     state.lastUpdate = new Date();
+    state.nextRefreshAt = Date.now() + 180_000;
     updateFooter();
   });
 }
@@ -2755,7 +2911,7 @@ function init() {
   $('#refresh').addEventListener('click', refresh);
 
   tickClock();
-  setInterval(tickClock, 1000);
+  setInterval(() => { tickClock(); updateRefreshCountdown(); }, 1000);
 
   // re-render relative timestamps every 30s without re-fetching
   setInterval(() => {
