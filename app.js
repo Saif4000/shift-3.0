@@ -1252,38 +1252,46 @@ function renderNotams() {
 function renderLive() {
   const grid = $('#live-grid');
   if (grid.dataset.rendered) return;
-  // Origin needed for YouTube postMessage to accept commands
   const origin = encodeURIComponent(location.origin);
-  grid.innerHTML = LIVE_CHANNELS.map((ch) => {
-    const src = `https://www.youtube.com/embed/live_stream?channel=${ch.id}` +
-                `&autoplay=1&mute=1&playsinline=1&enablejsapi=1&origin=${origin}`;
+
+  const embedUrl = (videoId) =>
+    `https://www.youtube-nocookie.com/embed/${videoId}` +
+    `?autoplay=1&mute=1&playsinline=1&controls=1&enablejsapi=1&rel=0&modestbranding=1&origin=${origin}`;
+  const thumbUrl = (videoId) =>
+    `https://i.ytimg.com/vi/${videoId}/hqdefault_live.jpg`;
+
+  grid.innerHTML = LIVE_CHANNELS.map((ch, i) => {
+    const liveNow = i < LIVE_AUTO_LOAD;
+    const body = liveNow
+      ? `<iframe src="${embedUrl(ch.videoId)}"
+                 allow="autoplay; encrypted-media; picture-in-picture"
+                 allowfullscreen loading="lazy"></iframe>
+         <div class="lt-mute-overlay">MUTED · CLICK FOR AUDIO</div>`
+      : `<img class="lt-thumb" src="${thumbUrl(ch.videoId)}" loading="lazy"
+              alt="${escapeHtml(ch.name)}"
+              onerror="this.style.display='none'" />
+         <div class="lt-play-overlay">▶ TAP TO STREAM</div>`;
     return `
-      <div class="live-tile" data-channel="${ch.id}" data-muted="1">
+      <div class="live-tile"
+           data-video="${ch.videoId}"
+           data-channel="${ch.channelId}"
+           data-muted="1"
+           data-loaded="${liveNow ? '1' : '0'}">
         <div class="lt-head">
           <span class="lt-name">${escapeHtml(ch.name)}</span>
           <span class="lt-reg"><span class="live-dot"></span>${escapeHtml(ch.desk)}</span>
         </div>
-        <div class="lt-frame">
-          <iframe src="${src}"
-                  allow="autoplay; encrypted-media; picture-in-picture"
-                  allowfullscreen
-                  loading="lazy"></iframe>
-          <div class="lt-mute-overlay">MUTED · CLICK FOR AUDIO</div>
-        </div>
+        <div class="lt-frame">${body}</div>
       </div>
     `;
   }).join('');
   grid.dataset.rendered = '1';
 
-  /**
-   * Click toggles AUDIO on the tile via YouTube IFrame API postMessage.
-   * Only one tile may have audio at a time — clicking another mutes the rest.
-   */
   const sendCmd = (iframe, func) => {
     try {
       iframe.contentWindow.postMessage(
         JSON.stringify({ event: 'command', func, args: [] }),
-        'https://www.youtube.com'
+        'https://www.youtube-nocookie.com'
       );
     } catch (e) { console.warn('[yt-cmd]', e.message); }
   };
@@ -1307,16 +1315,28 @@ function renderLive() {
       tile.querySelector('.lt-mute-overlay')?.remove();
     }
   };
+  const loadTile = (tile) => {
+    const videoId = tile.dataset.video;
+    const frame = tile.querySelector('.lt-frame');
+    frame.innerHTML =
+      `<iframe src="${embedUrl(videoId)}"
+               allow="autoplay; encrypted-media; picture-in-picture"
+               allowfullscreen></iframe>
+       <div class="lt-mute-overlay">MUTED · CLICK FOR AUDIO</div>`;
+    tile.dataset.loaded = '1';
+  };
 
   grid.addEventListener('click', (e) => {
     const tile = e.target.closest('.live-tile');
     if (!tile) return;
+    if (tile.dataset.loaded === '0') {
+      loadTile(tile);
+      return;
+    }
     const wasMuted = tile.dataset.muted === '1';
-    // Mute all others first
     grid.querySelectorAll('.live-tile').forEach((t) => {
       if (t !== tile && t.dataset.muted === '0') setMuted(t, true);
     });
-    // Toggle target
     setMuted(tile, !wasMuted);
   });
 }
