@@ -228,12 +228,16 @@ const CHOKEPOINTS = [
 /* YouTube live channels — embed via /embed/live_stream?channel=ID
  * Each channel's live stream is embedded directly; if it isn't live at a
  * given moment YouTube returns its standard "no current live stream" tile. */
-/* Verified 24/7 broadcasters only — channels with reliable live streams. */
+/* Verified 24/7 broadcasters. Bloomberg restored.
+ * NOTE: A subagent is currently researching the most reliable channel IDs
+ * and embed strategy on Reddit/GitHub — this list will be refined when it
+ * reports back. */
 const LIVE_CHANNELS = [
   { id: 'UCNye-wNBqNL5ZzHSJj3l8Bg', name: 'AL JAZEERA EN',  desk: 'DOHA · QA' },
   { id: 'UCQfwfsi5VrQ8yKZ-UWmAEFg', name: 'FRANCE 24 EN',   desk: 'PARIS · FR' },
   { id: 'UCoMdktPbSTixAyNGwb-UYkQ', name: 'SKY NEWS',       desk: 'LONDON · UK' },
   { id: 'UCknLrEdhRCp1aegoMqRaCZg', name: 'DW NEWS',        desk: 'BERLIN · DE' },
+  { id: 'UCIALMKvObZNtJ6AmdCLP7Lg', name: 'BLOOMBERG TV',   desk: 'NEW YORK · US' },
   { id: 'UC_gUM8rL-Lrg6O3adPW9K1g', name: 'WION',           desk: 'NEW DELHI · IN' },
   { id: 'UC7fWeaHhqgM4Ry-RMpM2YYw', name: 'TRT WORLD',      desk: 'ISTANBUL · TR' },
   { id: 'UCBi2mrWuNuyYy4gbM6fU18Q', name: 'ABC NEWS',       desk: 'NEW YORK · US' },
@@ -585,6 +589,35 @@ async function fetchOneTicker(t) {
 }
 
 async function fetchMarkets() {
+  // Primary path: our /api/markets edge function. It hits Yahoo Finance
+  // server-side (no CORS, no bot detection on public proxies) with a Stooq
+  // fallback, and caches at the edge for 60s.
+  try {
+    const r = await fetchTimeout('/api/markets', {}, 10000);
+    if (r.ok) {
+      const j = await r.json();
+      if (j.ok && Array.isArray(j.results)) {
+        const partial = { ...state.markets };
+        j.results.forEach((t) => {
+          if (t.price == null || isNaN(t.price)) return;
+          partial[t.sym] = {
+            price: t.price, pct: t.pct, change: t.change,
+            label: t.label, unit: t.unit, group: t.group,
+            source: t.source,
+          };
+        });
+        state.markets = partial;
+        renderTicker();
+        if (activeTab === 'markets' && !state.searchActive) renderContent();
+        cacheSet('markets', state.markets);
+        return;
+      }
+    }
+  } catch (e) {
+    console.warn('[markets-api]', e.message);
+  }
+
+  // Last-resort fallback: original client-side CORS-proxy path
   const partial = { ...state.markets };
   await Promise.allSettled(
     STOOQ_TICKERS.map(async (t) => {
@@ -643,14 +676,26 @@ async function fetchOilPriceAPI() {
  * FX — Frankfurter (native CORS, no key)
  * ============================================================ */
 async function fetchFX() {
+  // Primary: server-side /api/fx (Frankfurter .dev primary, .app fallback,
+  // exchangerate.host last-resort). Avoids client-side CORS quirks.
   try {
-    const r = await fetchTimeout(`https://api.frankfurter.app/latest?from=USD&to=${FX_PAIRS.join(',')}`);
+    const r = await fetchTimeout('/api/fx', {}, 8000);
+    if (r.ok) {
+      const j = await r.json();
+      if (j.ok && j.rates) {
+        state.fx = j.rates;
+        cacheSet('fx', state.fx);
+        return;
+      }
+    }
+  } catch (e) { console.warn('[fx-api]', e.message); }
+
+  // Fallback: direct (may work; both Frankfurter domains support CORS)
+  try {
+    const r = await fetchTimeout(`https://api.frankfurter.dev/v1/latest?base=USD&symbols=${FX_PAIRS.join(',')}`, {}, 6000);
     const j = await r.json();
-    state.fx = j?.rates || {};
-    cacheSet('fx', state.fx);
-  } catch (e) {
-    console.warn('[fx]', e.message);
-  }
+    if (j?.rates) { state.fx = j.rates; cacheSet('fx', state.fx); }
+  } catch (e) { console.warn('[fx-direct]', e.message); }
 }
 
 /* ============================================================
