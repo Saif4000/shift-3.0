@@ -490,27 +490,12 @@ body.fetching .dataflow {
 
 .ticker-track {
   display: inline-block;
-  padding-left: 100%;
+  white-space: nowrap;
   will-change: transform;
+  transform: translate3d(0, 0, 0);
 }
-.ticker-ltr { animation: marquee-ltr 75s linear infinite; }
-.ticker-rtl { animation: marquee-rtl 75s linear infinite; }
-.ticker-alt { animation: marquee-alt 120s linear infinite; }
-
-@keyframes marquee-ltr {
-  0%   { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
-}
-@keyframes marquee-rtl {
-  0%   { transform: translateX(-50%); }
-  100% { transform: translateX(0); }
-}
-@keyframes marquee-alt {
-  0%   { transform: translateX(0); }
-  47%  { transform: translateX(-50%); }
-  53%  { transform: translateX(-50%); }
-  100% { transform: translateX(0); }
-}
+/* Marquee direction is driven by JS RAF loop (laneState[elId].dir), not CSS
+ * keyframes — keeps the carousel continuous across data refreshes. */
 
 .tk { display: inline-block; padding: 0 14px; font-size: 11px; color: var(--white); }
 .tk b { color: var(--amber); font-weight: 700; margin-right: 5px; letter-spacing: 0.5px; }
@@ -811,7 +796,7 @@ body.fetching .dataflow {
 }
 #query::placeholder { color: var(--dim2); }
 #query:focus { border-color: var(--amber); box-shadow: 0 0 0 1px var(--amber-soft); }
-.search-go, .search-ai, .search-clear {
+.search-go, .search-clear {
   background: var(--bg);
   color: var(--amber);
   border: 1px solid var(--amber-dim);
@@ -824,13 +809,6 @@ body.fetching .dataflow {
   white-space: nowrap;
 }
 .search-go:hover { background: var(--amber); color: #000; }
-.search-ai {
-  color: var(--violet);
-  border-color: var(--violet);
-  background: rgba(183, 148, 255, 0.06);
-}
-.search-ai:hover { background: var(--violet); color: #000; }
-.search-ai:disabled { opacity: 0.4; cursor: not-allowed; }
 .search-clear { color: var(--red); border-color: var(--red); padding: 3px 8px; font-size: 14px; }
 .search-clear:hover { background: var(--red); color: #fff; }
 

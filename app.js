@@ -999,41 +999,72 @@ function tkChip(label, unit, price, pct) {
 }
 
 /**
- * Fill a ticker lane with N copies of the content, where N is computed from
- * the lane's actual viewport width. Guarantees the -50% marquee animation
- * always has content extending past the right edge, so when the loop
- * restarts the next copy is already there — no gap, just repeat.
- * Animation duration is set on the element so perceived scroll speed stays
- * constant regardless of how many copies were needed.
+ * RAF-driven carousel.
+ * Each lane keeps a persistent `shift` offset in `laneState[elId]`. Every
+ * animation frame the shift advances by (pps × dt) — when it crosses one
+ * segment width we wrap by subtracting that width. Because the rendered
+ * content is multiple identical segments, the wrap is invisible: the next
+ * segment is already in the position the previous one was leaving.
+ *
+ * Critically, refilling content (e.g. when markets update) does NOT reset
+ * the shift — so a data refresh never visibly stops the carousel.
  */
+const laneState = Object.create(null);
+
 function fillLane(elId, parts, fallback) {
   const el = document.getElementById(elId);
   if (!el) return;
   if (!parts || !parts.length) {
     el.innerHTML = `<span class="tk">${escapeHtml(fallback)}</span>`;
-    el.style.animationDuration = '60s';
+    el.style.transform = 'translateX(0)';
+    laneState[elId] = null;
     return;
   }
   const segment = parts.join('<span class="sep">·</span>') + '<span class="sep">·</span>';
-  // Pass 1 — measure a single segment's natural width
+
+  // Disable any leftover CSS animation — we drive motion ourselves.
+  el.style.animation = 'none';
+
+  // Pass 1 — measure one segment
   el.innerHTML = segment;
   const oneWidth = el.scrollWidth || 200;
+
+  // Render enough copies to keep the viewport full at all wrap points
   const lane = el.parentElement;
   const viewWidth = ((lane && lane.clientWidth) || window.innerWidth || 1200) - 50;
-
-  // Want total content ≥ 4× viewport so the marquee loop has zero visible gap
-  // even on ultrawide screens. ALSO force an even copy count — the CSS
-  // animation translates by -50%, so an odd count lands mid-segment and looks
-  // like a 'shift' at the loop point.
-  let copies = Math.max(4, Math.ceil((viewWidth * 4) / oneWidth));
+  let copies = Math.max(4, Math.ceil((viewWidth * 3) / oneWidth));
   if (copies % 2 !== 0) copies += 1;
   el.innerHTML = segment.repeat(copies);
 
-  // Animation duration so perceived scroll stays ~50 px/sec regardless of N
-  const totalScrollPx = (copies * oneWidth) * 0.5;
-  const dur = Math.max(30, Math.round(totalScrollPx / 50));
-  el.style.animationDuration = `${dur}s`;
+  // Preserve scroll offset across refills, but wrap into the new segment range
+  const prev = laneState[elId];
+  const dir = el.classList.contains('ticker-rtl') ? -1 : 1; // -1 = visible RIGHT, 1 = visible LEFT
+  laneState[elId] = {
+    el,
+    oneWidth,
+    pps: 55, // pixels per second
+    dir,
+    shift: prev ? ((prev.shift % oneWidth) + oneWidth) % oneWidth : 0,
+  };
 }
+
+/* requestAnimationFrame loop — runs once for the lifetime of the page. */
+let _marqueeT = 0;
+function marqueeFrame(t) {
+  if (!_marqueeT) _marqueeT = t;
+  const dt = Math.min(0.1, (t - _marqueeT) / 1000); // clamp dt across tab-switch gaps
+  _marqueeT = t;
+  for (const elId in laneState) {
+    const s = laneState[elId];
+    if (!s || !s.oneWidth) continue;
+    s.shift += s.pps * dt * s.dir;
+    // Wrap into [0, oneWidth)
+    s.shift = ((s.shift % s.oneWidth) + s.oneWidth) % s.oneWidth;
+    s.el.style.transform = `translate3d(${-s.shift}px, 0, 0)`;
+  }
+  requestAnimationFrame(marqueeFrame);
+}
+requestAnimationFrame(marqueeFrame);
 
 function renderTicker() {
   // ---- LANE 1 · OIL & ENERGY (RTL) ----
@@ -1882,77 +1913,6 @@ async function fetchGdeltSearch(q) {
   }
 }
 
-/* ============================================================
- * ASK AI — Puter.js wrapper around Perplexity Sonar (citation model).
- * Free + unlimited via puter.com (user-pays model — first call may pop
- * the Puter sign-in dialog). The API key model means the answer renders
- * the same regardless of whether we have one.
- * ============================================================ */
-function extractAIText(r) {
-  if (!r) return '';
-  if (typeof r === 'string') return r;
-  return r?.message?.content ||
-         r?.content ||
-         r?.text ||
-         r?.choices?.[0]?.message?.content ||
-         '';
-}
-function extractCitations(r) {
-  if (!r || typeof r === 'string') return [];
-  const list = r?.citations ||
-               r?.search_results ||
-               r?.sources ||
-               r?.message?.citations ||
-               r?.choices?.[0]?.message?.citations ||
-               [];
-  return list.map((c) => {
-    if (typeof c === 'string') return { url: c, title: c };
-    return {
-      url: c.url || c.link || '',
-      title: c.title || c.url || c.link || 'source',
-      snippet: c.snippet || c.text || '',
-    };
-  });
-}
-function hostnameOf(u) {
-  try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return ''; }
-}
-
-async function askAI(q) {
-  if (!q) return;
-  if (!window.puter?.ai?.chat) {
-    state.aiAnswer = { error: 'Puter.js not loaded. Refresh to retry.' };
-    state.aiLoading = false;
-    renderSearch();
-    return;
-  }
-  state.searchActive = true;
-  state.searchQuery = q;
-  state.aiLoading = true;
-  state.aiAnswer = null;
-  $('#query-clear').hidden = false;
-  renderSearch();
-
-  // Run cached + GDELT retrieval in parallel — the user gets citations from
-  // BOTH our own feed and the AI's own web search.
-  fetchGdeltSearch(q).then(renderSearch);
-
-  try {
-    const prompt =
-      `You are an intelligence analyst. Answer in 4–6 short bullet points with inline citations [1], [2], etc. ` +
-      `Focus on facts from the last 7 days. Topic: ${q}`;
-    const r = await window.puter.ai.chat(prompt, { model: 'perplexity-sonar' });
-    state.aiAnswer = {
-      text: extractAIText(r),
-      citations: extractCitations(r),
-    };
-  } catch (e) {
-    state.aiAnswer = { error: e?.message || String(e) };
-  }
-  state.aiLoading = false;
-  renderSearch();
-}
-
 function localMatch(it, q) {
   return (
     it.title.toLowerCase().includes(q) ||
@@ -1961,47 +1921,6 @@ function localMatch(it, q) {
     (it.region || '').toLowerCase().includes(q) ||
     (it.originalTitle || '').toLowerCase().includes(q)
   );
-}
-
-function renderAIBlock() {
-  if (state.aiLoading) {
-    return `
-      <div class="ai-block">
-        <div class="ai-head"><span class="ai-tag">▸ AI SYNTHESIS · PERPLEXITY SONAR</span><span class="ai-meta">via Puter.js</span></div>
-        <div class="ai-loading">Synthesizing answer with citations…</div>
-      </div>
-    `;
-  }
-  const a = state.aiAnswer;
-  if (!a) return '';
-  if (a.error) {
-    return `
-      <div class="ai-block">
-        <div class="ai-head"><span class="ai-tag">▸ AI SYNTHESIS</span><span class="ai-meta">error</span></div>
-        <div class="ai-err">${escapeHtml(a.error)} · Click ASK AI again — the first call may need a free Puter sign-in popup.</div>
-      </div>
-    `;
-  }
-  // Convert [1] [2] markers into clickable sup links if citations are present
-  let textHtml = escapeHtml(a.text || '');
-  textHtml = textHtml.replace(/\[(\d+)\]/g, (_, n) => `<sup data-cite="${n}">[${n}]</sup>`);
-  const citesHtml = (a.citations || []).map((c, i) => `
-    <a class="ai-cite" href="${escapeHtml(c.url)}" target="_blank" rel="noopener" id="ai-cite-${i+1}">
-      <span class="ai-cite-n">[${i+1}]</span>
-      <span>
-        <div>${escapeHtml(c.title || c.url)}</div>
-        <div class="ai-cite-host">${escapeHtml(hostnameOf(c.url))}</div>
-      </span>
-    </a>
-  `).join('');
-  return `
-    <div class="ai-block">
-      <div class="ai-head"><span class="ai-tag">▸ AI SYNTHESIS · PERPLEXITY SONAR</span><span class="ai-meta">via Puter.js · free</span></div>
-      <div class="ai-body">${textHtml}</div>
-      ${citesHtml ? `<div class="ai-cites">${citesHtml}</div>` : ''}
-      <div class="ai-disclaimer">▮ AI-SYNTHESIZED · verify all claims against citations · this is the only AI-generated text in the app</div>
-    </div>
-  `;
 }
 
 function renderSearch() {
@@ -2015,9 +1934,8 @@ function renderSearch() {
     <div class="search-summary">
       <span class="search-kw">▸ ${escapeHtml(state.searchQuery)}</span>
       <span class="search-counts">${local.length} cached · ${state.searchGdelt.length} GDELT · ${sources.size} sources</span>
-      <span class="search-nb">RETRIEVAL + OPTIONAL AI SYNTHESIS</span>
+      <span class="search-nb">RETRIEVAL ONLY · NO LLM SUMMARY</span>
     </div>
-    ${renderAIBlock()}
     <div class="section-head">CACHED FEED MATCHES <span class="sub">${local.length}</span></div>
     ${local.length ? local.slice(0, 200).map(renderItem).join('') : '<div class="empty">No cached matches.</div>'}
     <div class="section-head">GDELT 2.0 — LIVE WEB QUERY · 2 DAYS <span class="sub">${state.searchGdelt.length}</span></div>
@@ -2040,7 +1958,6 @@ function renderSearch() {
 function bindSearch() {
   const input = $('#query');
   const goBtn = $('#query-go');
-  const aiBtn = $('#query-ai');
   const clearBtn = $('#query-clear');
 
   const submit = () => {
@@ -2049,34 +1966,22 @@ function bindSearch() {
       state.searchActive = false;
       state.searchQuery = '';
       state.searchGdelt = [];
-      state.aiAnswer = null;
-      state.aiLoading = false;
       clearBtn.hidden = true;
       renderContent();
       return;
     }
     state.searchActive = true;
     state.searchQuery = q;
-    state.aiAnswer = null;
-    state.aiLoading = false;
     clearBtn.hidden = false;
     renderSearch();
     fetchGdeltSearch(q).then(renderSearch);
   };
 
-  const submitAI = () => {
-    const q = input.value.trim();
-    if (!q) { toast('Enter a query first'); input.focus(); return; }
-    askAI(q);
-  };
-
   input.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { submitAI(); return; }
     if (e.key === 'Enter') submit();
     if (e.key === 'Escape') { input.value = ''; submit(); input.blur(); }
   });
   goBtn.addEventListener('click', submit);
-  aiBtn.addEventListener('click', submitAI);
   clearBtn.addEventListener('click', () => { input.value = ''; submit(); input.focus(); });
 }
 
