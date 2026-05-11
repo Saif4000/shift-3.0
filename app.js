@@ -142,6 +142,11 @@ const SOURCES = [
   { id: 'dow',       name: 'DoW War Dept',    url: 'https://www.war.gov/DesktopModules/ArticleCS/RSS.ashx?ContentType=1&Site=945&max=20',                                                            region: 'US-GOV', lang: 'en' },
   { id: 'doe',       name: 'DoE Energy',      url: 'https://www.energy.gov/rss/articles.xml',                                                                                                        region: 'US-GOV', lang: 'en' },
   { id: 'doe-news',  name: 'DoE via news',    url: 'https://news.google.com/rss/search?q=site:energy.gov&when:2d&hl=en-US&gl=US&ceid=US:en',                                                          region: 'US-GOV', lang: 'en' },
+  { id: 'doj',       name: 'DoJ Justice',     url: 'https://www.justice.gov/feeds/justice-news.xml',                                                                                                  region: 'US-GOV', lang: 'en' },
+  { id: 'doj-news',  name: 'DoJ via news',    url: 'https://news.google.com/rss/search?q=site:justice.gov&when:2d&hl=en-US&gl=US&ceid=US:en',                                                          region: 'US-GOV', lang: 'en' },
+  { id: 'treasury',  name: 'Treasury',        url: 'https://home.treasury.gov/news/press-releases/feed',                                                                                              region: 'US-GOV', lang: 'en' },
+  { id: 'treas-news',name: 'Treasury via news',url: 'https://news.google.com/rss/search?q=site:treasury.gov&when:2d&hl=en-US&gl=US&ceid=US:en',                                                        region: 'US-GOV', lang: 'en' },
+  { id: 'ofac',      name: 'OFAC sanctions',  url: 'https://news.google.com/rss/search?q=%22OFAC%22+OR+%22Office+of+Foreign+Assets+Control%22+sanctions+OR+designation&when:3d&hl=en-US&gl=US&ceid=US:en', region: 'US-GOV', lang: 'en' },
   { id: 'senate-rc', name: 'Senate Roll Call',url: 'https://www.senate.gov/legislative/LIS/roll_call_lists/votes_new.xml',                                                                            region: 'US-GOV', lang: 'en' },
   { id: 'house-rc',  name: 'House Roll Call', url: 'https://news.google.com/rss/search?q=%22roll+call%22+%22House+of+Representatives%22+vote&when:1d&hl=en-US&gl=US&ceid=US:en',                       region: 'US-GOV', lang: 'en' },
 
@@ -2424,6 +2429,8 @@ const US_GOV_SOURCE_IDS = new Set([
   'dos', 'dos-pr',
   'dow',
   'doe', 'doe-news',
+  'doj', 'doj-news',
+  'treasury', 'treas-news', 'ofac',
   'senate-rc', 'house-rc',
 ]);
 function isUsGovItem(it) {
