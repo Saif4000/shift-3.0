@@ -1552,6 +1552,49 @@ function airspaceStyle(t) {
   }
 }
 
+/**
+ * Render order tier per airspace type — LOWER number = drawn FIRST = at BOTTOM.
+ * The full hierarchy big-to-small puts FIRs at the very bottom and ATZs/MATZs
+ * on top, with restricted/danger/prohibited above CTRs.
+ *
+ *   1 FIR  → 2 UIR  → 3 ADIZ  → 4 CTA/LTA/UTA  → 5 TMA/TRA/TSA  →
+ *   6 CTR/MCTR  → 7 R/D/P (special use)  → 8 ATZ/MATZ  → 9 TMZ/RMZ
+ */
+function airspaceTier(type) {
+  switch (Number(type)) {
+    case 10: return 1;
+    case 11: return 2;
+    case 12: return 3;
+    case 26: case 34: case 35: return 4;
+    case 7:  case 8:  case 9:  return 5;
+    case 4:  case 36: return 6;
+    case 1:  case 2:  case 3:  case 17: case 18: return 7;
+    case 13: case 14: return 8;
+    case 5:  case 6:  return 9;
+    default: return 10;
+  }
+}
+
+/** Cheap planar shoelace area in deg² — only used for sort tiebreak so the
+ *  exact units don't matter. Handles Polygon and MultiPolygon GeoJSON shapes. */
+function polygonArea(coords) {
+  if (!Array.isArray(coords) || coords.length === 0) return 0;
+  // MultiPolygon: coordinates = [[[ring1], [hole1], ...], ...]
+  // Polygon:      coordinates = [[ring1], [hole1], ...]
+  let ring;
+  if (Array.isArray(coords[0]?.[0]?.[0])) ring = coords[0][0];      // multipoly outer
+  else if (Array.isArray(coords[0]?.[0])) ring = coords[0];          // poly outer
+  else return 0;
+  let a = 0;
+  for (let i = 0; i < ring.length - 1; i++) {
+    const [x1, y1] = ring[i] || [];
+    const [x2, y2] = ring[i + 1] || [];
+    if (x1 == null || y1 == null || x2 == null || y2 == null) continue;
+    a += x1 * y2 - x2 * y1;
+  }
+  return Math.abs(a) / 2;
+}
+
 async function fetchAndRenderAirspace() {
   if (!leafletMap) return;
   try {
@@ -1571,7 +1614,15 @@ async function fetchAndRenderAirspace() {
     if (airspaceLayer) leafletMap.removeLayer(airspaceLayer);
     airspaceLayer = L.layerGroup();
 
-    j.items.forEach((a) => {
+    // Sort big→small so small zones end up rendered LAST = visually on top.
+    // Within the same type tier, larger area is drawn first.
+    const sorted = j.items.slice().sort((x, y) => {
+      const tx = airspaceTier(x.type), ty = airspaceTier(y.type);
+      if (tx !== ty) return tx - ty;
+      return polygonArea(y.geometry?.coordinates) - polygonArea(x.geometry?.coordinates);
+    });
+
+    sorted.forEach((a) => {
       const geom = a.geometry;
       if (!geom || !geom.coordinates) return;
       const style = airspaceStyle(a.type);
