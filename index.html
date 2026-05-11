@@ -75,8 +75,19 @@
     </div>
   </div>
 
-  <div class="ticker" id="ticker">
-    <div id="ticker-track" class="ticker-track">LOADING MARKETS…</div>
+  <div class="ticker-stack">
+    <div class="ticker tk-lane lane-oil">
+      <span class="lane-label">OIL · ENERGY ◀</span>
+      <div id="ticker-oil" class="ticker-track ticker-rtl">LOADING ENERGY…</div>
+    </div>
+    <div class="ticker tk-lane lane-crypto">
+      <span class="lane-label">▶ CRYPTO</span>
+      <div id="ticker-crypto" class="ticker-track ticker-ltr">LOADING CRYPTO…</div>
+    </div>
+    <div class="ticker tk-lane lane-fx">
+      <span class="lane-label">FX · INDICES ◆</span>
+      <div id="ticker-fx" class="ticker-track ticker-alt">LOADING FX…</div>
+    </div>
   </div>
 
   <div class="banner" id="breaking-banner">

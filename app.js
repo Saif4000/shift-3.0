@@ -85,6 +85,12 @@ const SOURCES = [
   { id: 'aje',     name: 'Al Jazeera EN',     url: 'https://www.aljazeera.com/xml/rss/all.xml',                region: 'QA',   lang: 'en' },
   { id: 'toi',     name: 'Times of Israel',   url: 'https://www.timesofisrael.com/feed/',                      region: 'IL',   lang: 'en' },
   { id: 'jp',      name: 'Jerusalem Post',    url: 'https://www.jpost.com/rss/rssfeedsfrontpage.aspx',         region: 'IL',   lang: 'en' },
+  { id: 'ynet',    name: 'Ynetnews',          url: 'https://www.ynetnews.com/Integration/StoryRss3082.xml',    region: 'IL',   lang: 'en' },
+  { id: 'haaretz', name: 'Haaretz EN',        url: 'https://www.haaretz.com/srv/htz-rss-eng',                  region: 'IL',   lang: 'en' },
+  { id: 'i24-rss', name: 'i24NEWS',           url: 'https://news.google.com/rss/search?q=site:i24news.tv&when:1d&hl=en-US&gl=US&ceid=US:en', region: 'IL', lang: 'en' },
+  { id: 'ihayom',  name: 'Israel Hayom',      url: 'https://www.israelhayom.com/feed/',                        region: 'IL',   lang: 'en' },
+  { id: 'globes',  name: 'Globes (biz)',      url: 'https://news.google.com/rss/search?q=site:globes.co.il&when:1d&hl=en-US&gl=US&ceid=US:en', region: 'IL', lang: 'en' },
+  { id: 'arutz',   name: 'Israel Nat. News',  url: 'https://www.israelnationalnews.com/Rss.aspx',              region: 'IL',   lang: 'en' },
   { id: 'tn',      name: 'The National UAE',  url: 'https://www.thenationalnews.com/rss/uae',                  region: 'AE',   lang: 'en' },
   { id: 'tnmena',  name: 'The National MENA', url: 'https://www.thenationalnews.com/rss/mena',                 region: 'AE',   lang: 'en' },
   { id: 'an',      name: 'Arab News',         url: 'https://www.arabnews.com/rss.xml',                         region: 'SA',   lang: 'en' },
@@ -110,6 +116,18 @@ const SOURCES = [
   { id: 'who',       name: 'WHO',             url: 'https://www.who.int/rss-feeds/news-english.xml',            region: 'UN',   lang: 'en' },
   { id: 'un',        name: 'UN News',         url: 'https://news.un.org/feed/subscribe/en/news/all/rss.xml',    region: 'UN',   lang: 'en' },
 
+  // ---- Defense / geopolitics analysis ----
+  { id: 'dod',       name: 'DOD News',        url: 'https://www.defense.gov/DesktopModules/ArticleCS/RSS.ashx?ContentType=1&Site=945&max=20', region: 'US',  lang: 'en' },
+  { id: 'state',     name: 'State Dept',      url: 'https://news.google.com/rss/search?q=site:state.gov&when:1d&hl=en-US&gl=US&ceid=US:en', region: 'US',  lang: 'en' },
+  { id: 'diplomat',  name: 'The Diplomat',    url: 'https://thediplomat.com/feed/',                              region: 'ANALYSIS', lang: 'en' },
+  { id: 'stratfor',  name: 'Stratfor',        url: 'https://news.google.com/rss/search?q=site:stratfor.com&when:2d&hl=en-US&gl=US&ceid=US:en', region: 'ANALYSIS', lang: 'en' },
+
+  // ---- Aggregators (alternative to GDELT) ----
+  { id: 'r-world',   name: 'Reddit Worldnews', url: 'https://www.reddit.com/r/worldnews/.rss?limit=25',           region: 'AGG',  lang: 'en' },
+  { id: 'r-mena',    name: 'Reddit MENA',      url: 'https://www.reddit.com/r/MiddleEastNews/.rss?limit=25',      region: 'AGG',  lang: 'en' },
+  { id: 'r-geo',     name: 'Reddit Geopol',    url: 'https://www.reddit.com/r/geopolitics/.rss?limit=25',         region: 'AGG',  lang: 'en' },
+  { id: 'r-syria',   name: 'Reddit Syria',     url: 'https://www.reddit.com/r/syriancivilwar/.rss?limit=25',      region: 'AGG',  lang: 'en' },
+
   // ---- AI / tech ----
   { id: 'tc-ai',     name: 'TechCrunch AI',   url: 'https://techcrunch.com/category/artificial-intelligence/feed/', region: 'TECH', lang: 'en' },
   { id: 'verge-ai',  name: 'The Verge AI',    url: 'https://www.theverge.com/rss/ai-artificial-intelligence/index.xml', region: 'TECH', lang: 'en' },
@@ -134,17 +152,22 @@ loadCustomSources();
  *   Frankfurter (FX vs USD)
  *   CoinGecko (crypto)
  * ============================================================ */
+/**
+ * Market tickers — each tries Yahoo Finance first (proxy-friendly JSON),
+ * then falls back to Stooq CSV. Internal key (`sym`) is preserved so the
+ * UI doesn't care which provider answered.
+ */
 const STOOQ_TICKERS = [
-  { sym: 'cl.f',  label: 'WTI',    unit: '$', group: 'energy' },
-  { sym: 'b.f',   label: 'BRENT',  unit: '$', group: 'energy' },
-  { sym: 'ng.f',  label: 'NATGAS', unit: '$', group: 'energy' },
-  { sym: 'gc.f',  label: 'GOLD',   unit: '$', group: 'metals' },
-  { sym: 'si.f',  label: 'SILVER', unit: '$', group: 'metals' },
-  { sym: '^spx',  label: 'S&P 500',unit: '',  group: 'index'  },
-  { sym: '^dji',  label: 'DOW',    unit: '',  group: 'index'  },
-  { sym: '^ndq',  label: 'NDQ',    unit: '',  group: 'index'  },
-  { sym: '^ta35', label: 'TA-35',  unit: '',  group: 'index'  },
-  { sym: 'dx.f',  label: 'DXY',    unit: '',  group: 'fx'     },
+  { sym: 'cl.f',  yahoo: 'CL=F',   label: 'WTI',    unit: '$', group: 'energy' },
+  { sym: 'b.f',   yahoo: 'BZ=F',   label: 'BRENT',  unit: '$', group: 'energy' },
+  { sym: 'ng.f',  yahoo: 'NG=F',   label: 'NATGAS', unit: '$', group: 'energy' },
+  { sym: 'gc.f',  yahoo: 'GC=F',   label: 'GOLD',   unit: '$', group: 'metals' },
+  { sym: 'si.f',  yahoo: 'SI=F',   label: 'SILVER', unit: '$', group: 'metals' },
+  { sym: '^spx',  yahoo: '^GSPC',  label: 'S&P 500',unit: '',  group: 'index'  },
+  { sym: '^dji',  yahoo: '^DJI',   label: 'DOW',    unit: '',  group: 'index'  },
+  { sym: '^ndq',  yahoo: '^IXIC',  label: 'NDQ',    unit: '',  group: 'index'  },
+  { sym: '^ta35', yahoo: '^TA125.TA', label: 'TA-125', unit: '', group: 'index' },
+  { sym: 'dx.f',  yahoo: 'DX-Y.NYB', label: 'DXY',  unit: '',  group: 'fx'     },
 ];
 
 const FX_PAIRS  = ['ILS','AED','SAR','EGP','QAR','EUR','GBP','TRY','JPY'];
@@ -189,16 +212,22 @@ const CHOKEPOINTS = [
   { code: 'GIB',  name: 'GIBRALTAR',        lat: 35.967, lon: -5.483, rings_nm: [50] },
 ];
 
-/* YouTube live channels — embed via /embed/live_stream?channel=ID */
+/* YouTube live channels — embed via /embed/live_stream?channel=ID
+ * Each channel's live stream is embedded directly; if it isn't live at a
+ * given moment YouTube returns its standard "no current live stream" tile. */
 const LIVE_CHANNELS = [
-  { id: 'UCNye-wNBqNL5ZzHSJj3l8Bg', name: 'AL JAZEERA EN',  desk: 'DOHA · QA'      },
-  { id: 'UCQfwfsi5VrQ8yKZ-UWmAEFg', name: 'FRANCE 24 EN',   desk: 'PARIS · FR'     },
-  { id: 'UCoMdktPbSTixAyNGwb-UYkQ', name: 'SKY NEWS',       desk: 'LONDON · UK'    },
-  { id: 'UCknLrEdhRCp1aegoMqRaCZg', name: 'DW NEWS',        desk: 'BERLIN · DE'    },
-  { id: 'UCIALMKvObZNtJ6AmdCLP7Lg', name: 'BLOOMBERG TV',   desk: 'NEW YORK · US'  },
-  { id: 'UC7fWeaHhqgM4Ry-RMpM2YYw', name: 'TRT WORLD',      desk: 'ISTANBUL · TR'  },
-  { id: 'UCWAPpM5sn5BAhf-9TaIYBkw', name: 'AL ARABIYA',     desk: 'RIYADH · SA (AR)' },
-  { id: 'UChqUTb7kYRX8-EiaN3XdGSQ', name: 'REUTERS',        desk: 'WIRE · GLOBAL'  },
+  { id: 'UCNye-wNBqNL5ZzHSJj3l8Bg', name: 'AL JAZEERA EN',  desk: 'DOHA · QA' },
+  { id: 'UCsLcwjY6V1c0kdmAFwlNxgw', name: 'AL ARABIYA EN',  desk: 'DUBAI · AE' },
+  { id: 'UC68Mz_kS2dVCpYTtmiuwo3w', name: 'AL HADATH',      desk: 'RIYADH · SA (AR)' },
+  { id: 'UCfFR8Tt0nnnT-tQp3JEdh7g', name: 'I24 NEWS EN',    desk: 'TEL AVIV · IL' },
+  { id: 'UCQfwfsi5VrQ8yKZ-UWmAEFg', name: 'FRANCE 24 EN',   desk: 'PARIS · FR' },
+  { id: 'UCoMdktPbSTixAyNGwb-UYkQ', name: 'SKY NEWS',       desk: 'LONDON · UK' },
+  { id: 'UCknLrEdhRCp1aegoMqRaCZg', name: 'DW NEWS',        desk: 'BERLIN · DE' },
+  { id: 'UC7fWeaHhqgM4Ry-RMpM2YYw', name: 'TRT WORLD',      desk: 'ISTANBUL · TR' },
+  { id: 'UC_gUM8rL-Lrg6O3adPW9K1g', name: 'WION',           desk: 'NEW DELHI · IN' },
+  { id: 'UCBi2mrWuNuyYy4gbM6fU18Q', name: 'ABC NEWS',       desk: 'NEW YORK · US' },
+  { id: 'UCIALMKvObZNtJ6AmdCLP7Lg', name: 'BLOOMBERG TV',   desk: 'NEW YORK · US' },
+  { id: 'UCMmaBzfCCwZ2KqaBJjkj0fw', name: 'CNA',            desk: 'SINGAPORE · SG' },
 ];
 
 /* ============================================================
@@ -479,17 +508,41 @@ async function fetchAllNews() {
 /* ============================================================
  * MARKETS — STOOQ CSV
  * ============================================================ */
+async function fetchYahoo(sym) {
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=1d&range=5d`;
+  try {
+    const r = await proxyFetch(url, {}, 8000);
+    const j = await r.json();
+    const meta = j?.chart?.result?.[0]?.meta;
+    if (!meta) return null;
+    const price = meta.regularMarketPrice;
+    const prev  = meta.chartPreviousClose ?? meta.previousClose;
+    if (price == null || isNaN(price)) return null;
+    let pct = null, change = null;
+    if (prev != null && !isNaN(prev) && prev !== 0) {
+      change = price - prev;
+      pct = (change / prev) * 100;
+    }
+    return { price, pct, change };
+  } catch (e) {
+    console.warn('[yahoo]', sym, e.message);
+    return null;
+  }
+}
+
 async function fetchStooq(sym) {
   const url = `https://stooq.com/q/l/?s=${encodeURIComponent(sym)}&f=sd2t2ohlcvpn&h&e=csv`;
   try {
-    const r = await proxyFetch(url);
-    const text = await r.text();
-    const lines = text.trim().split(/\r?\n/);
+    const r = await proxyFetch(url, {}, 8000);
+    const text = (await r.text()).trim();
+    // Stooq sometimes returns N/D for off-hours; guard against that and against
+    // proxies that return HTML error pages.
+    const lines = text.split(/\r?\n/);
     if (lines.length < 2) return null;
+    if (!/^Symbol[, ]/i.test(lines[0])) return null;
     const cols = lines[1].split(',');
-    // header: Symbol,Date,Time,Open,High,Low,Close,Volume,Percent,Name
-    const open  = parseFloat(cols[3]);
-    const close = parseFloat(cols[6]);
+    const open   = parseFloat(cols[3]);
+    const close  = parseFloat(cols[6]);
     const pctRaw = cols[8];
     if (isNaN(close) || close === 0) return null;
     let pct = null;
@@ -498,7 +551,6 @@ async function fetchStooq(sym) {
       const n = parseFloat(cleaned);
       if (!isNaN(n)) pct = n;
     }
-    // fallback: derive intraday move from open->close when % missing
     if (pct == null && !isNaN(open) && open !== 0) {
       pct = ((close - open) / open) * 100;
     }
@@ -510,17 +562,29 @@ async function fetchStooq(sym) {
   }
 }
 
+/** Try Yahoo first; if that returns nothing, try Stooq. */
+async function fetchOneTicker(t) {
+  if (t.yahoo) {
+    const y = await fetchYahoo(t.yahoo);
+    if (y) return y;
+  }
+  if (t.sym) {
+    const s = await fetchStooq(t.sym);
+    if (s) return s;
+  }
+  return null;
+}
+
 async function fetchMarkets() {
-  // fire all stooq calls in parallel, render as each lands
   const partial = { ...state.markets };
   await Promise.allSettled(
     STOOQ_TICKERS.map(async (t) => {
-      const m = await fetchStooq(t.sym);
+      const m = await fetchOneTicker(t);
       if (!m) return;
       partial[t.sym] = { ...m, label: t.label, unit: t.unit, group: t.group };
       state.markets = { ...partial };
       renderTicker();
-      if (activeTab === 'markets') renderContent();
+      if (activeTab === 'markets' && !state.searchActive) renderContent();
     })
   );
   cacheSet('markets', state.markets);
@@ -688,41 +752,51 @@ async function fetchNotams() {
 /* ============================================================
  * RENDER — TICKER
  * ============================================================ */
+function tkChip(label, unit, price, pct) {
+  const has = price != null && !isNaN(price);
+  const cls = (pct ?? 0) >= 0 ? 'up' : 'down';
+  const arr = (pct ?? 0) >= 0 ? '▲' : '▼';
+  const pctTxt = pct != null ? `${arr}${fmtNum(Math.abs(pct), 2)}%` : '';
+  return `<span class="tk"><b>${label}</b>${unit}${has ? fmtNum(price) : '—'}<span class="${cls}">${pctTxt}</span></span>`;
+}
+
+function buildLane(parts, fallback) {
+  if (!parts.length) return `<span class="tk">${fallback}</span>`;
+  const joined = parts.join('<span class="sep">·</span>');
+  // duplicate content for seamless loop
+  return joined + '<span class="sep">·</span>' + joined;
+}
+
 function renderTicker() {
-  const parts = [];
+  // ---- LANE 1 · OIL & ENERGY (RTL) ----
+  const oilSyms = ['cl.f','b.f','ng.f','gc.f','si.f'];
+  const oilParts = oilSyms.map((sym) => {
+    const m = state.markets[sym]; if (!m) return null;
+    return tkChip(m.label, m.unit, m.price, m.pct);
+  }).filter(Boolean);
+  const oilEl = $('#ticker-oil');
+  if (oilEl) oilEl.innerHTML = buildLane(oilParts, 'ENERGY · LOADING');
 
-  STOOQ_TICKERS.forEach((t) => {
-    const m = state.markets[t.sym];
-    if (!m) return;
-    const cls = (m.pct ?? 0) >= 0 ? 'up' : 'down';
-    const arr = (m.pct ?? 0) >= 0 ? '▲' : '▼';
-    const pctTxt = m.pct != null ? `${arr}${fmtNum(Math.abs(m.pct), 2)}%` : '';
-    parts.push(
-      `<span class="tk"><b>${t.label}</b>${t.unit}${fmtNum(m.price)} <span class="${cls}">${pctTxt}</span></span>`
-    );
-  });
-
-  Object.entries(state.fx).forEach(([cur, rate]) => {
-    parts.push(`<span class="tk"><b>USD/${cur}</b>${fmtNum(rate, 4)}</span>`);
-  });
-
-  Object.entries(state.crypto).forEach(([id, v]) => {
+  // ---- LANE 2 · CRYPTO (LTR) ----
+  const cryptoParts = Object.entries(state.crypto).map(([id, v]) => {
     const lbl = id === 'bitcoin' ? 'BTC' : id === 'ethereum' ? 'ETH' : id.toUpperCase();
     const pct = v.usd_24h_change ?? 0;
-    const cls = pct >= 0 ? 'up' : 'down';
-    const arr = pct >= 0 ? '▲' : '▼';
-    parts.push(
-      `<span class="tk"><b>${lbl}</b>$${fmtNum(v.usd)} <span class="${cls}">${arr}${fmtNum(Math.abs(pct), 2)}%</span></span>`
-    );
+    return tkChip(lbl, '$', v.usd, pct);
   });
+  const cryEl = $('#ticker-crypto');
+  if (cryEl) cryEl.innerHTML = buildLane(cryptoParts, 'CRYPTO · LOADING');
 
-  if (!parts.length) {
-    $('#ticker-track').innerHTML = '<span class="tk">LIVE MARKET FEED INITIALISING…</span>';
-    return;
-  }
-  const joined = parts.join('<span class="sep">·</span>');
-  // duplicate for seamless marquee loop
-  $('#ticker-track').innerHTML = joined + '<span class="sep">·</span>' + joined;
+  // ---- LANE 3 · FX + INDICES (alternating) ----
+  const idxSyms = ['^spx','^dji','^ndq','^ta35','dx.f'];
+  const idxParts = idxSyms.map((sym) => {
+    const m = state.markets[sym]; if (!m) return null;
+    return tkChip(m.label, m.unit, m.price, m.pct);
+  }).filter(Boolean);
+  const fxParts = Object.entries(state.fx).map(([cur, rate]) =>
+    `<span class="tk"><b>USD/${cur}</b>${fmtNum(rate, 4)}</span>`
+  );
+  const fxEl = $('#ticker-fx');
+  if (fxEl) fxEl.innerHTML = buildLane([...idxParts, ...fxParts], 'FX · LOADING');
 }
 
 /* ============================================================
@@ -1030,41 +1104,72 @@ function renderNotams() {
 function renderLive() {
   const grid = $('#live-grid');
   if (grid.dataset.rendered) return;
-  grid.innerHTML = LIVE_CHANNELS.map((ch) => `
-    <div class="live-tile" data-channel="${ch.id}">
-      <div class="lt-head">
-        <span class="lt-name">${escapeHtml(ch.name)}</span>
-        <span class="lt-reg"><span class="live-dot"></span>${escapeHtml(ch.desk)}</span>
-      </div>
-      <div class="lt-frame">
-        <div class="lt-placeholder" role="button" tabindex="0">
-          ▶ TAP TO STREAM
-          <span class="lt-sub">YouTube · channel live</span>
+  // Origin needed for YouTube postMessage to accept commands
+  const origin = encodeURIComponent(location.origin);
+  grid.innerHTML = LIVE_CHANNELS.map((ch) => {
+    const src = `https://www.youtube.com/embed/live_stream?channel=${ch.id}` +
+                `&autoplay=1&mute=1&playsinline=1&enablejsapi=1&origin=${origin}`;
+    return `
+      <div class="live-tile" data-channel="${ch.id}" data-muted="1">
+        <div class="lt-head">
+          <span class="lt-name">${escapeHtml(ch.name)}</span>
+          <span class="lt-reg"><span class="live-dot"></span>${escapeHtml(ch.desk)}</span>
+        </div>
+        <div class="lt-frame">
+          <iframe src="${src}"
+                  allow="autoplay; encrypted-media; picture-in-picture"
+                  allowfullscreen
+                  loading="lazy"></iframe>
+          <div class="lt-mute-overlay">MUTED · CLICK FOR AUDIO</div>
         </div>
       </div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
   grid.dataset.rendered = '1';
 
-  const play = (tile) => {
-    const ch = tile.dataset.channel;
-    const frame = tile.querySelector('.lt-frame');
-    frame.innerHTML =
-      `<iframe src="https://www.youtube.com/embed/live_stream?channel=${ch}&autoplay=1" ` +
-      `allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen loading="lazy"></iframe>`;
+  /**
+   * Click toggles AUDIO on the tile via YouTube IFrame API postMessage.
+   * Only one tile may have audio at a time — clicking another mutes the rest.
+   */
+  const sendCmd = (iframe, func) => {
+    try {
+      iframe.contentWindow.postMessage(
+        JSON.stringify({ event: 'command', func, args: [] }),
+        'https://www.youtube.com'
+      );
+    } catch (e) { console.warn('[yt-cmd]', e.message); }
+  };
+  const setMuted = (tile, muted) => {
+    const iframe = tile.querySelector('iframe');
+    if (!iframe) return;
+    if (muted) {
+      sendCmd(iframe, 'mute');
+      tile.dataset.muted = '1';
+      if (!tile.querySelector('.lt-mute-overlay')) {
+        const frame = tile.querySelector('.lt-frame');
+        const ov = document.createElement('div');
+        ov.className = 'lt-mute-overlay';
+        ov.textContent = 'MUTED · CLICK FOR AUDIO';
+        frame.appendChild(ov);
+      }
+    } else {
+      sendCmd(iframe, 'unMute');
+      sendCmd(iframe, 'playVideo');
+      tile.dataset.muted = '0';
+      tile.querySelector('.lt-mute-overlay')?.remove();
+    }
   };
 
   grid.addEventListener('click', (e) => {
-    const ph = e.target.closest('.lt-placeholder');
-    if (!ph) return;
-    play(ph.closest('.live-tile'));
-  });
-  grid.addEventListener('keydown', (e) => {
-    if (e.key !== 'Enter' && e.key !== ' ') return;
-    const ph = e.target.closest('.lt-placeholder');
-    if (!ph) return;
-    e.preventDefault();
-    play(ph.closest('.live-tile'));
+    const tile = e.target.closest('.live-tile');
+    if (!tile) return;
+    const wasMuted = tile.dataset.muted === '1';
+    // Mute all others first
+    grid.querySelectorAll('.live-tile').forEach((t) => {
+      if (t !== tile && t.dataset.muted === '0') setMuted(t, true);
+    });
+    // Toggle target
+    setMuted(tile, !wasMuted);
   });
 }
 
@@ -1347,6 +1452,11 @@ function renderContent() {
   if (activeTab === 'map') {
     c.hidden = true; lv.hidden = true; mv.hidden = false;
     initMapOnce();
+    // Force Leaflet to recompute tile layout whenever the map view becomes
+    // visible — without this the container may have had 0 height during init
+    // and tiles never paint.
+    setTimeout(() => { try { leafletMap?.invalidateSize(true); } catch {} }, 60);
+    setTimeout(() => { try { leafletMap?.invalidateSize(true); } catch {} }, 300);
     return;
   }
   if (activeTab === 'live') {
