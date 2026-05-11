@@ -133,9 +133,19 @@ const SOURCES = [
   { id: 'who',       name: 'WHO',             url: 'https://www.who.int/rss-feeds/news-english.xml',            region: 'UN',   lang: 'en' },
   { id: 'un',        name: 'UN News',         url: 'https://news.un.org/feed/subscribe/en/news/all/rss.xml',    region: 'UN',   lang: 'en' },
 
+  // ---- US Federal Government (US GOV tab) ----
+  { id: 'wh',        name: 'White House',     url: 'https://www.whitehouse.gov/feed/',                                                                                                              region: 'US-GOV', lang: 'en' },
+  { id: 'wh-news',   name: 'WH via news',     url: 'https://news.google.com/rss/search?q=site:whitehouse.gov+OR+%22White+House%22+statement&when:1d&hl=en-US&gl=US&ceid=US:en',                       region: 'US-GOV', lang: 'en' },
+  { id: 'trump-ts',  name: 'Trump statements',url: 'https://news.google.com/rss/search?q=%22President+Trump%22+OR+%22Truth+Social%22+OR+%22Trump+said%22&when:1d&hl=en-US&gl=US&ceid=US:en',         region: 'US-GOV', lang: 'en' },
+  { id: 'dos',       name: 'DoS State Dept',  url: 'https://www.state.gov/feed/',                                                                                                                    region: 'US-GOV', lang: 'en' },
+  { id: 'dos-pr',    name: 'DoS press',       url: 'https://news.google.com/rss/search?q=site:state.gov+press+OR+release&when:2d&hl=en-US&gl=US&ceid=US:en',                                          region: 'US-GOV', lang: 'en' },
+  { id: 'dow',       name: 'DoW War Dept',    url: 'https://www.war.gov/DesktopModules/ArticleCS/RSS.ashx?ContentType=1&Site=945&max=20',                                                            region: 'US-GOV', lang: 'en' },
+  { id: 'doe',       name: 'DoE Energy',      url: 'https://www.energy.gov/rss/articles.xml',                                                                                                        region: 'US-GOV', lang: 'en' },
+  { id: 'doe-news',  name: 'DoE via news',    url: 'https://news.google.com/rss/search?q=site:energy.gov&when:2d&hl=en-US&gl=US&ceid=US:en',                                                          region: 'US-GOV', lang: 'en' },
+  { id: 'senate-rc', name: 'Senate Roll Call',url: 'https://www.senate.gov/legislative/LIS/roll_call_lists/votes_new.xml',                                                                            region: 'US-GOV', lang: 'en' },
+  { id: 'house-rc',  name: 'House Roll Call', url: 'https://news.google.com/rss/search?q=%22roll+call%22+%22House+of+Representatives%22+vote&when:1d&hl=en-US&gl=US&ceid=US:en',                       region: 'US-GOV', lang: 'en' },
+
   // ---- Defense / geopolitics analysis ----
-  { id: 'dod',       name: 'War Dept (DOD)',  url: 'https://www.war.gov/DesktopModules/ArticleCS/RSS.ashx?ContentType=1&Site=945&max=20', region: 'US',  lang: 'en' },
-  { id: 'state',     name: 'State Dept',      url: 'https://news.google.com/rss/search?q=site:state.gov&when:1d&hl=en-US&gl=US&ceid=US:en', region: 'US',  lang: 'en' },
   { id: 'diplomat',  name: 'The Diplomat',    url: 'https://thediplomat.com/feed/',                              region: 'ANALYSIS', lang: 'en' },
   { id: 'stratfor',  name: 'Stratfor',        url: 'https://news.google.com/rss/search?q=site:stratfor.com&when:2d&hl=en-US&gl=US&ceid=US:en', region: 'ANALYSIS', lang: 'en' },
 
@@ -2392,18 +2402,34 @@ function moveFocus(delta) {
 /* ============================================================
  * KEYBOARD SHORTCUTS
  * ============================================================ */
-const TAB_ORDER = ['all','security','politics','economy','ai','markets','tensions','sources','uae-gov','marine','live','map'];
-const TAB_LETTERS = { a: 'all', s: 'security', p: 'politics', e: 'economy', i: 'ai', m: 'markets', t: 'tensions', u: 'uae-gov', n: 'marine', l: 'live', v: 'map' };
+const TAB_ORDER = ['all','security','politics','economy','ai','markets','tensions','sources','us-gov','uae-gov','marine','live','map'];
+const TAB_LETTERS = { a: 'all', s: 'security', p: 'politics', e: 'economy', i: 'ai', m: 'markets', t: 'tensions', w: 'us-gov', u: 'uae-gov', n: 'marine', l: 'live', v: 'map' };
 
 /* Sources that belong to the UAE GOV tab (also matched by region prefix 'AE-') */
 const UAE_GOV_SOURCE_IDS = new Set([
   'wam', 'modgovae', 'moiuae', 'mofa-ae', 'uaegov', 'ncema',
   'adpolice', 'dubaipol', 'barq', 'forsan', 'tn',
+  'moi-en', 'moi-ar', 'dxb-pol', 'ad-pol', 'moiuae-ig', 'forsan-gn',
 ]);
 function isUaeGovItem(it) {
   if (!it) return false;
   if (UAE_GOV_SOURCE_IDS.has(it.sourceId)) return true;
   if (typeof it.region === 'string' && it.region.startsWith('AE')) return true;
+  return false;
+}
+
+/* Sources that belong to the US GOV tab — federal exec branch + Congress */
+const US_GOV_SOURCE_IDS = new Set([
+  'wh', 'wh-news', 'trump-ts',
+  'dos', 'dos-pr',
+  'dow',
+  'doe', 'doe-news',
+  'senate-rc', 'house-rc',
+]);
+function isUsGovItem(it) {
+  if (!it) return false;
+  if (US_GOV_SOURCE_IDS.has(it.sourceId)) return true;
+  if (typeof it.region === 'string' && it.region.startsWith('US-GOV')) return true;
   return false;
 }
 
@@ -2530,6 +2556,8 @@ function renderContent() {
   let items = state.items;
   if (activeTab === 'uae-gov') {
     items = items.filter(isUaeGovItem);
+  } else if (activeTab === 'us-gov') {
+    items = items.filter(isUsGovItem);
   } else if (activeTab !== 'all') {
     items = items.filter((i) => i.tags.includes(activeTab));
   }
