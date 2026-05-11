@@ -62,6 +62,8 @@ const FEED_URLS = [
   'https://home.treasury.gov/news/press-releases/feed',
   'https://www.senate.gov/legislative/LIS/roll_call_lists/votes_new.xml',
   'https://rollcall.com/factbase/trump/topic/calendar/feed/',
+  'https://rollcall.com/factbase/topic/latest/feed/',
+  'https://rollcall.com/factbase/trump/transcripts/feed/',
 ];
 
 const json = (status, payload) => new Response(JSON.stringify(payload), {
