@@ -136,10 +136,12 @@ const SOURCES = [
   // ---- US Federal Government (US GOV tab) ----
   { id: 'wh',        name: 'White House',     url: 'https://www.whitehouse.gov/feed/',                                                                                                              region: 'US-GOV', lang: 'en' },
   { id: 'wh-news',   name: 'WH via news',     url: 'https://news.google.com/rss/search?q=site:whitehouse.gov+OR+%22White+House%22+statement&when:1d&hl=en-US&gl=US&ceid=US:en',                       region: 'US-GOV', lang: 'en' },
-  { id: 'fb-cal',    name: 'Factbase Calendar',         url: 'https://rollcall.com/factbase/trump/topic/calendar/feed/',                                                                              region: 'US-GOV', lang: 'en' },
-  { id: 'fb-latest', name: 'Factbase Latest',           url: 'https://rollcall.com/factbase/topic/latest/feed/',                                                                                       region: 'US-GOV', lang: 'en' },
-  { id: 'fb-tx',     name: 'Factbase Transcripts',      url: 'https://rollcall.com/factbase/trump/transcripts/feed/',                                                                                  region: 'US-GOV', lang: 'en' },
-  { id: 'fb-news',   name: 'Factbase via news',         url: 'https://news.google.com/rss/search?q=site:rollcall.com/factbase&when:3d&hl=en-US&gl=US&ceid=US:en',                                       region: 'US-GOV', lang: 'en' },
+  // Note: rollcall.com/factbase/* and factba.se/* feeds are paywalled (all
+  // return 'Protected: Factbase Latest' placeholders). Workarounds below.
+  { id: 'rc-main',   name: 'Roll Call (main)',          url: 'https://rollcall.com/feed/',                                                                                                             region: 'US-GOV', lang: 'en' },
+  { id: 'fb-news',   name: 'Factbase via news',         url: 'https://news.google.com/rss/search?q=site:rollcall.com/factbase+OR+site:factba.se&when:3d&hl=en-US&gl=US&ceid=US:en',                     region: 'US-GOV', lang: 'en' },
+  { id: 'potus-sch', name: 'POTUS Schedule (news)',     url: 'https://news.google.com/rss/search?q=%22Trump+schedule%22+OR+%22White+House+schedule%22+OR+%22President%27s+schedule%22&when:1d&hl=en-US&gl=US&ceid=US:en', region: 'US-GOV', lang: 'en' },
+  { id: 'politico',  name: 'Politico Playbook',         url: 'https://news.google.com/rss/search?q=site:politico.com+%22Playbook%22&when:1d&hl=en-US&gl=US&ceid=US:en',                                  region: 'US-GOV', lang: 'en' },
   { id: 'dos',       name: 'DoS State Dept',  url: 'https://www.state.gov/feed/',                                                                                                                    region: 'US-GOV', lang: 'en' },
   { id: 'dos-pr',    name: 'DoS press',       url: 'https://news.google.com/rss/search?q=site:state.gov+press+OR+release&when:2d&hl=en-US&gl=US&ceid=US:en',                                          region: 'US-GOV', lang: 'en' },
   { id: 'dow',       name: 'DoW War Dept',    url: 'https://www.war.gov/DesktopModules/ArticleCS/RSS.ashx?ContentType=1&Site=945&max=20',                                                            region: 'US-GOV', lang: 'en' },
@@ -2428,7 +2430,7 @@ function isUaeGovItem(it) {
 /* Sources that belong to the US GOV tab — federal exec branch + Congress */
 const US_GOV_SOURCE_IDS = new Set([
   'wh', 'wh-news',
-  'fb-cal', 'fb-latest', 'fb-tx', 'fb-news',
+  'rc-main', 'fb-news', 'potus-sch', 'politico',
   'dos', 'dos-pr',
   'dow',
   'doe', 'doe-news',
@@ -2440,8 +2442,8 @@ const US_GOV_SOURCE_IDS = new Set([
 /* US GOV sub-tabs — drill down by department. Rendered as a chip strip
  * at the top of the us-gov view; click swaps the filter. */
 const US_GOV_SUBTABS = [
-  { id: 'potus',    label: 'POTUS',     sources: ['fb-cal'] },
-  { id: 'wh',       label: 'WH',        sources: ['wh', 'wh-news', 'fb-latest', 'fb-tx', 'fb-news'] },
+  { id: 'potus',    label: 'POTUS',     sources: ['potus-sch', 'politico', 'fb-news'] },
+  { id: 'wh',       label: 'WH',        sources: ['wh', 'wh-news', 'rc-main'] },
   { id: 'congress', label: 'CONGRESS',  sources: ['senate-rc', 'house-rc'] },
   { id: 'state',    label: 'DOS',       sources: ['dos', 'dos-pr'] },
   { id: 'war',      label: 'DOW',       sources: ['dow'] },
