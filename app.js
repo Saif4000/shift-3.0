@@ -117,6 +117,14 @@ const SOURCES = [
   { id: 'bbc-me',  name: 'BBC Middle East',   url: 'https://feeds.bbci.co.uk/news/world/middle_east/rss.xml',  region: 'REG',  lang: 'en' },
   { id: 'alar',    name: 'Al Arabiya (AR)',   url: 'https://www.alarabiya.net/.mrss/ar.xml',                   region: 'SA',   lang: 'ar' },
 
+  // ---- Arabic-language regional (translated headlines + original RTL preserved) ----
+  { id: 'aje-ar',    name: 'Al Jazeera (AR)',  url: 'https://www.aljazeera.net/aljazeerarss/a7c186be-1baa-4bd4-9d80-a84db769f779/73d0e1b4-532f-45ef-b135-bfdff8b8cab9', region: 'QA', lang: 'ar' },
+  { id: 'aawsat-ar', name: 'Asharq Al-Awsat',  url: 'https://news.google.com/rss/search?q=site:aawsat.com&when:2d&hl=ar&gl=SA&ceid=SA:ar',                                                            region: 'SA', lang: 'ar' },
+  { id: 'alkhaleej', name: 'Al Khaleej (AR)',  url: 'https://news.google.com/rss/search?q=site:alkhaleej.ae&when:2d&hl=ar&gl=AE&ceid=AE:ar',                                                          region: 'AE', lang: 'ar' },
+  { id: 'alittihad', name: 'Al Ittihad (AR)',  url: 'https://news.google.com/rss/search?q=site:alittihad.ae&when:2d&hl=ar&gl=AE&ceid=AE:ar',                                                          region: 'AE', lang: 'ar' },
+  { id: 'alriyadh',  name: 'Al Riyadh (AR)',   url: 'https://news.google.com/rss/search?q=site:alriyadh.com&when:2d&hl=ar&gl=SA&ceid=SA:ar',                                                          region: 'SA', lang: 'ar' },
+  { id: 'okaz-ar',   name: 'Okaz (AR)',        url: 'https://news.google.com/rss/search?q=site:okaz.com.sa&when:2d&hl=ar&gl=SA&ceid=SA:ar',                                                           region: 'SA', lang: 'ar' },
+
   // ---- US wires / American press ----
   { id: 'nyt-world', name: 'NYT World',       url: 'https://rss.nytimes.com/services/xml/rss/nyt/World.xml',   region: 'US',   lang: 'en' },
   { id: 'nyt-bus',   name: 'NYT Business',    url: 'https://rss.nytimes.com/services/xml/rss/nyt/Business.xml',region: 'US',   lang: 'en' },
@@ -2624,7 +2632,7 @@ function renderItem(it) {
   const tagsHtml = (it.tags || []).map((t) => `<span class="tag tag-${t}">${t}</span>`).join('');
   const region = it.region ? `<span class="region">${escapeHtml(it.region)}</span>` : '';
   const orig = it.originalTitle
-    ? `<div class="orig" dir="rtl">${escapeHtml(it.originalTitle)}</div>`
+    ? `<div class="orig" dir="rtl" lang="ar">${escapeHtml(it.originalTitle)}</div>`
     : '';
   const dateIso = it.date instanceof Date ? it.date.toISOString() : new Date(it.date).toISOString();
   return `
@@ -3258,6 +3266,50 @@ function bootSequence() {
   }, total);
 }
 
+/* ============================================================
+ * THEME (light / dark) and LANG (en / ar) toggles
+ * ============================================================ */
+const I18N = {
+  en: { feed: 'feed', refresh: 'Refresh', themeTitle: 'Toggle light / dark', langTitle: 'تبديل اللغة' },
+  ar: { feed: 'الأخبار', refresh: 'تحديث', themeTitle: 'وضع داكن / فاتح', langTitle: 'Switch language' },
+};
+function getCurrentTheme() {
+  const t = document.documentElement.getAttribute('data-theme');
+  if (t) return t;
+  return matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+}
+function setTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  try { localStorage.setItem('shift:theme', theme); } catch (e) {}
+  const btn = document.getElementById('theme-toggle');
+  if (btn) btn.textContent = theme === 'light' ? '☀' : '☾';
+  // Update mobile browser chrome
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', theme === 'light' ? '#f7f3e8' : '#000000');
+}
+function setLang(lang) {
+  document.documentElement.setAttribute('lang', lang);
+  document.documentElement.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
+  try { localStorage.setItem('shift:lang', lang); } catch (e) {}
+  const btn = document.getElementById('lang-toggle');
+  if (btn) btn.textContent = lang === 'ar' ? 'AR' : 'EN';
+}
+function bindThemeAndLang() {
+  // Initialize button labels to reflect what the pre-paint script applied
+  setTheme(getCurrentTheme());
+  setLang(document.documentElement.getAttribute('lang') === 'ar' ? 'ar' : 'en');
+
+  const themeBtn = document.getElementById('theme-toggle');
+  if (themeBtn) themeBtn.addEventListener('click', () => {
+    setTheme(getCurrentTheme() === 'dark' ? 'light' : 'dark');
+  });
+  const langBtn = document.getElementById('lang-toggle');
+  if (langBtn) langBtn.addEventListener('click', () => {
+    const cur = document.documentElement.getAttribute('lang') === 'ar' ? 'ar' : 'en';
+    setLang(cur === 'ar' ? 'en' : 'ar');
+  });
+}
+
 function init() {
   bindTabs();
   bindSearch();
@@ -3265,6 +3317,7 @@ function init() {
   bindKeyboard();
   bindHelp();
   bindContentClicks();
+  bindThemeAndLang();
   $('#refresh').addEventListener('click', refresh);
 
   tickClock();

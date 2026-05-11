@@ -21,6 +21,77 @@
   --magenta:    #ff6ad5;
   --violet:     #b794ff;
   --mono: 'JetBrains Mono','IBM Plex Mono','Menlo','Consolas','Courier New',monospace;
+  /* Apple-style Arabic font cascade: SF Arabic on macOS/iOS 15+, then Geeza Pro
+   * (older Apple devices), then Noto Naskh Arabic / Tajawal as web fallbacks. */
+  --arabic: 'SF Arabic', 'SF Arabic Text', 'Geeza Pro', 'Helvetica Neue',
+            'Noto Naskh Arabic', 'Noto Sans Arabic', 'Tajawal', 'Segoe UI',
+            'Tahoma', sans-serif;
+}
+
+/* ============= LIGHT THEME ============= */
+/* Activated by [data-theme="light"] on <html>. Same variable names, lighter
+ * values — every rule that uses var(--bg) etc. swaps automatically. */
+:root[data-theme="light"] {
+  --bg:         #f7f3e8;   /* warm terminal paper */
+  --bg2:        #ffffff;
+  --bg3:        #efe9d6;
+  --bg4:        #e6dec4;
+  --hover:      #ece4cc;
+  --hover2:     #ded3b1;
+  --border:     #c9bf9c;
+  --border2:    #a89c75;
+  --amber:      #a35e00;   /* darker amber for contrast on light */
+  --amber-dim:  #7a4600;
+  --amber-soft: #d9b87a;
+  --green:      #00813e;
+  --red:        #b81f2f;
+  --white:      #1a1a1a;   /* primary text — semantic, not literal */
+  --dim:        #4a4030;
+  --dim2:       #6c6555;
+  --cyan:       #006a99;
+  --magenta:    #b3148a;
+  --violet:     #6a4ac9;
+}
+
+/* Respect OS preference on first visit when no explicit choice is saved */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    --bg:         #f7f3e8;
+    --bg2:        #ffffff;
+    --bg3:        #efe9d6;
+    --bg4:        #e6dec4;
+    --hover:      #ece4cc;
+    --hover2:     #ded3b1;
+    --border:     #c9bf9c;
+    --border2:    #a89c75;
+    --amber:      #a35e00;
+    --amber-dim:  #7a4600;
+    --amber-soft: #d9b87a;
+    --green:      #00813e;
+    --red:        #b81f2f;
+    --white:      #1a1a1a;
+    --dim:        #4a4030;
+    --dim2:       #6c6555;
+    --cyan:       #006a99;
+    --magenta:    #b3148a;
+    --violet:     #6a4ac9;
+  }
+}
+
+/* ============= ARABIC TYPOGRAPHY ============= */
+/* Any element marked dir="rtl" or lang="ar" gets the Apple-style cascade
+ * and slightly larger line-height (Arabic reads better with extra leading). */
+[lang="ar"],
+[dir="rtl"],
+.lang-ar {
+  font-family: var(--arabic);
+  line-height: 1.55;
+  letter-spacing: 0;
+  font-feature-settings: "ss01", "calt";
+}
+[dir="rtl"] .title,
+[lang="ar"] .title {
+  font-weight: 600;
 }
 
 /* universal [hidden] enforcement — must beat author display: rules */

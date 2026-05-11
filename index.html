@@ -25,7 +25,22 @@
 <meta name="twitter:title" content="SHIFT 2.0 — Regional Intelligence Terminal" />
 <meta name="twitter:description" content="No AI slop. Live news + tactical map + markets + chokepoint monitoring. GCC focused." />
 <meta name="twitter:image" content="/og.svg" />
-<meta name="color-scheme" content="dark" />
+<meta name="color-scheme" content="dark light" />
+<script>
+  // Apply saved theme + language BEFORE the rest of the page renders to
+  // avoid a flash of the wrong palette / direction.
+  (function () {
+    try {
+      var t = localStorage.getItem('shift:theme');
+      if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+      var l = localStorage.getItem('shift:lang');
+      if (l === 'ar') {
+        document.documentElement.setAttribute('lang', 'ar');
+        document.documentElement.setAttribute('dir', 'rtl');
+      }
+    } catch (e) {}
+  })();
+</script>
 <link rel="preconnect" href="https://api.frankfurter.app" />
 <link rel="preconnect" href="https://api.coingecko.com" />
 <link rel="preconnect" href="https://api.gdeltproject.org" />
@@ -112,6 +127,8 @@
         </span>
       </span>
       <button id="refresh" class="refresh-btn" title="Refresh">↻</button>
+      <button id="theme-toggle" class="refresh-btn" title="Toggle light / dark" aria-label="Toggle theme">☾</button>
+      <button id="lang-toggle" class="refresh-btn" title="Switch language · تبديل اللغة" aria-label="Switch language">EN</button>
       <span class="live"><span class="dot"></span>LIVE</span>
       <span class="dataflow" id="dataflow" title="data sync">⟳</span>
     </div>
