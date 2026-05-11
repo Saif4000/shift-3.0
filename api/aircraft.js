@@ -63,35 +63,50 @@ export default async function handler(request) {
   let preset = 'uae';
   try { preset = new URL(request.url).searchParams.get('preset') || 'uae'; } catch {}
   const p = PRESETS[preset] || PRESETS.uae;
-  const url = `https://api.airplanes.live/v2/point/${p.lat}/${p.lon}/${p.radius}`;
 
-  try {
-    const r = await fetch(url, {
-      headers: {
-        'Accept': 'application/json',
-        'User-Agent': 'shift-2.0 (edge)',
-      },
-      cache: 'no-store',
-    });
-    if (!r.ok) {
-      return json(200, { ok: false, error: 'airplanes.live HTTP ' + r.status, preset });
+  // Multiple community ADS-B feeds — try in order. Each blocks/limits a bit
+  // differently and the union is reliable.
+  const endpoints = [
+    {
+      url: `https://api.adsb.lol/v2/point/${p.lat}/${p.lon}/${p.radius}`,
+      name: 'adsb.lol',
+    },
+    {
+      url: `https://api.airplanes.live/v2/point/${p.lat}/${p.lon}/${p.radius}`,
+      name: 'airplanes.live',
+    },
+    {
+      url: `https://opendata.adsb.fi/api/v2/point/${p.lat}/${p.lon}/${p.radius}`,
+      name: 'adsb.fi',
+    },
+  ];
+
+  let lastErr = null;
+  for (const ep of endpoints) {
+    try {
+      const r = await fetch(ep.url, {
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'Mozilla/5.0 (compatible; SHIFT-Terminal/2.0; +https://shift-2-0.vercel.app)',
+        },
+        cache: 'no-store',
+      });
+      if (!r.ok) { lastErr = `${ep.name} HTTP ${r.status}`; continue; }
+      const j = await r.json();
+      const list = j?.ac || j?.aircraft || [];
+      if (!Array.isArray(list)) { lastErr = `${ep.name}: unexpected shape`; continue; }
+      const states = list.map(toOpenSkyVector).filter(Boolean);
+      return json(200, {
+        ok: true,
+        preset,
+        center: { lat: p.lat, lon: p.lon, radius_nm: p.radius },
+        source: ep.name,
+        time: Math.floor(Date.now() / 1000),
+        states,
+      });
+    } catch (e) {
+      lastErr = `${ep.name}: ${e?.message || e}`;
     }
-    const j = await r.json();
-    const list = j?.ac || [];
-    const states = list.map(toOpenSkyVector).filter(Boolean);
-    return json(200, {
-      ok: true,
-      preset,
-      center: { lat: p.lat, lon: p.lon, radius_nm: p.radius },
-      source: 'airplanes.live',
-      time: Math.floor(Date.now() / 1000),
-      states,
-    });
-  } catch (e) {
-    return json(200, {
-      ok: false,
-      error: String(e?.message || e),
-      preset,
-    });
   }
+  return json(200, { ok: false, error: 'all ADS-B feeds failed', detail: lastErr, preset });
 }
