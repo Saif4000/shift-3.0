@@ -223,7 +223,53 @@ button { font-family: inherit; }
   color: var(--dim); font-size: 11px;
   white-space: nowrap;
 }
-#clock { color: var(--white); font-weight: 600; letter-spacing: 0.5px; }
+#clock { color: var(--white); font-weight: 600; letter-spacing: 0.5px; cursor: help; outline: none; }
+#clock:focus, #clock:hover { color: var(--amber); }
+
+/* Capital-time tooltip on Zulu clock */
+.clock-wrap { position: relative; display: inline-block; }
+.clock-tip {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 200;
+  background: var(--bg);
+  border: 1px solid var(--amber);
+  box-shadow: 0 0 24px rgba(255,170,0,0.18), 0 0 4px rgba(255,170,0,0.45);
+  padding: 8px 0;
+  min-width: 220px;
+  font-size: 11px;
+  font-family: var(--mono);
+  letter-spacing: 0.4px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition: opacity .15s, transform .15s;
+}
+.clock-wrap:hover .clock-tip,
+#clock:focus + .clock-tip,
+.clock-tip:hover {
+  opacity: 1; pointer-events: auto; transform: translateY(0);
+}
+.ctip-row {
+  display: grid;
+  grid-template-columns: 44px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 10px;
+}
+.ctip-row b { color: var(--amber); font-weight: 700; letter-spacing: 1px; }
+.ctip-row span { color: var(--white); font-weight: 600; text-align: right; }
+.ctip-row i { color: var(--dim); font-style: normal; font-size: 9px; letter-spacing: 0.3px; }
+.ctip-foot {
+  display: block;
+  margin-top: 6px;
+  padding: 6px 10px 0;
+  border-top: 1px solid var(--border);
+  color: var(--dim2);
+  font-size: 9px;
+  letter-spacing: 0.3px;
+}
 
 .refresh-btn {
   background: transparent;

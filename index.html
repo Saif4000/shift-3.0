@@ -69,7 +69,19 @@
       <span class="tagline">REGIONAL INTEL TERMINAL</span>
     </div>
     <div class="meta">
-      <span id="clock">--:--:--Z</span>
+      <span class="clock-wrap">
+        <span id="clock" tabindex="0">--:--:--Z</span>
+        <span class="clock-tip" id="clock-tip" role="tooltip" aria-hidden="true">
+          <span class="ctip-row"><b>ZULU</b><span id="ct-utc">--:--</span></span>
+          <span class="ctip-row"><b>DXB</b><span id="ct-dxb">--:--</span><i>UTC+4</i></span>
+          <span class="ctip-row"><b>RUH</b><span id="ct-ruh">--:--</span><i>UTC+3</i></span>
+          <span class="ctip-row"><b>TLV</b><span id="ct-tlv">--:--</span><i>UTC+2/3</i></span>
+          <span class="ctip-row"><b>LON</b><span id="ct-lon">--:--</span><i>UTC+0/1</i></span>
+          <span class="ctip-row"><b>NYC</b><span id="ct-nyc">--:--</span><i>UTC-5/4</i></span>
+          <span class="ctip-row"><b>SGP</b><span id="ct-sgp">--:--</span><i>UTC+8</i></span>
+          <span class="ctip-foot">▸ Zulu / Z = UTC ·  hover or focus to keep open</span>
+        </span>
+      </span>
       <button id="refresh" class="refresh-btn" title="Refresh">↻</button>
       <span class="live"><span class="dot"></span>LIVE</span>
     </div>

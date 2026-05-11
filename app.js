@@ -96,7 +96,17 @@ const SOURCES = [
   { id: 'an',      name: 'Arab News',         url: 'https://www.arabnews.com/rss.xml',                         region: 'SA',   lang: 'en' },
   { id: 'kt',      name: 'Khaleej Times',     url: 'https://www.khaleejtimes.com/rss',                         region: 'AE',   lang: 'en' },
   // Middle East Eye removed — known editorial bias (Qatar-linked funding allegations).
-  { id: 'barq',    name: 'UAE Barq',          url: 'https://rsshub.app/instagram/user/uae_barq_en',            region: 'AE',   lang: 'en' },
+
+  // ---- UAE official / state channels ----
+  { id: 'wam',      name: 'WAM (Emirates News)', url: 'https://news.google.com/rss/search?q=site:wam.ae&when:2d&hl=en-US&gl=US&ceid=US:en', region: 'AE-GOV', lang: 'en' },
+  { id: 'modgovae', name: 'UAE MoD',             url: 'https://rsshub.app/instagram/user/modgovae',                    region: 'AE-MOD', lang: 'en' },
+  { id: 'moiuae',   name: 'UAE MoI',             url: 'https://rsshub.app/instagram/user/moiuae',                      region: 'AE-MOI', lang: 'en' },
+  { id: 'barq',     name: 'UAE Barq',            url: 'https://rsshub.app/instagram/user/uae_barq_en',                 region: 'AE',    lang: 'en' },
+  { id: 'mofa-ae',  name: 'UAE MoFA',            url: 'https://news.google.com/rss/search?q=%22UAE+Ministry+of+Foreign+Affairs%22+OR+site:mofaic.gov.ae&when:3d&hl=en-US&gl=US&ceid=US:en', region: 'AE-GOV', lang: 'en' },
+  { id: 'uaegov',   name: 'UAE Government',      url: 'https://news.google.com/rss/search?q=site:u.ae+OR+%22UAE+Government+Media+Office%22&when:3d&hl=en-US&gl=US&ceid=US:en', region: 'AE-GOV', lang: 'en' },
+  { id: 'ncema',    name: 'NCEMA UAE',           url: 'https://news.google.com/rss/search?q=NCEMA+OR+%22National+Emergency+Crisis%22+UAE&when:3d&hl=en-US&gl=US&ceid=US:en', region: 'AE-GOV', lang: 'en' },
+  { id: 'adpolice', name: 'Abu Dhabi Police',    url: 'https://news.google.com/rss/search?q=%22Abu+Dhabi+Police%22+OR+ADPoliceHQ&when:3d&hl=en-US&gl=US&ceid=US:en', region: 'AE-POL', lang: 'en' },
+  { id: 'dubaipol', name: 'Dubai Police',        url: 'https://news.google.com/rss/search?q=%22Dubai+Police%22+OR+DubaiPoliceHQ&when:3d&hl=en-US&gl=US&ceid=US:en', region: 'AE-POL', lang: 'en' },
   { id: 'rt-me',   name: 'Reuters MENA',      url: 'https://news.google.com/rss/search?q=site:reuters.com+(Israel+OR+Iran+OR+Gulf+OR+Saudi+OR+UAE+OR+Gaza)+when:1d&hl=en-US&gl=US&ceid=US:en', region: 'WIRE', lang: 'en' },
   { id: 'bbc-me',  name: 'BBC Middle East',   url: 'https://feeds.bbci.co.uk/news/world/middle_east/rss.xml',  region: 'REG',  lang: 'en' },
   { id: 'alar',    name: 'Al Arabiya (AR)',   url: 'https://www.alarabiya.net/.mrss/ar.xml',                   region: 'SA',   lang: 'ar' },
@@ -195,7 +205,9 @@ const NOTAM_AIRPORT_NAMES = {
 
 /* Map presets — center, zoom, OpenSky bounding box */
 const MAP_PRESETS = {
-  uae:    { center: [24.5,   54.4],  zoom: 7, bbox: { lamin: 22, lamax: 27, lomin: 51, lomax: 57 } },
+  // Widened from 22-27N/51-57E so the OpenSky query covers the busy DXB/AUH
+  // approach corridors + Hormuz transit — narrow box returned zero hits.
+  uae:    { center: [24.5,   54.4],  zoom: 7, bbox: { lamin: 20, lamax: 28, lomin: 49, lomax: 60 } },
   hormuz: { center: [26.566, 56.25], zoom: 7, bbox: { lamin: 22, lamax: 30, lomin: 50, lomax: 62 } },
   mena:   { center: [27.0,   42.0],  zoom: 4, bbox: { lamin: 10, lamax: 45, lomin: 20, lomax: 70 } },
   redsea: { center: [20.0,   38.0],  zoom: 5, bbox: { lamin: 10, lamax: 30, lomin: 30, lomax: 46 } },
@@ -660,6 +672,29 @@ async function fetchCrypto() {
 /* ============================================================
  * GDELT TENSIONS — native CORS, no key
  * ============================================================ */
+/** GDELT 'language' field comes back as a name or 3-letter code — both map here. */
+const LANG_TO_CODE = {
+  arabic:'ar',  ara:'ar',
+  hebrew:'he',  heb:'he',
+  russian:'ru', rus:'ru',
+  persian:'fa', farsi:'fa', per:'fa', fas:'fa',
+  turkish:'tr', tur:'tr',
+  french:'fr',  fra:'fr', fre:'fr',
+  german:'de',  deu:'de', ger:'de',
+  spanish:'es', spa:'es',
+  italian:'it', ita:'it',
+  portuguese:'pt', por:'pt',
+  chinese:'zh', zho:'zh', chi:'zh',
+  japanese:'ja', jpn:'ja',
+  korean:'ko',  kor:'ko',
+  urdu:'ur',    urd:'ur',
+  hindi:'hi',   hin:'hi',
+};
+function langToCode(lang) {
+  if (!lang) return null;
+  return LANG_TO_CODE[String(lang).toLowerCase().trim()] || null;
+}
+
 async function fetchTensions() {
   const q = '(Iran OR Gaza OR Houthi OR Hezbollah OR Hamas OR Israel OR UAE OR "Red Sea" OR "Saudi Arabia" OR Lebanon OR Syria OR Yemen) (strike OR attack OR missile OR drone OR clash OR military OR raid OR rocket)';
   const url = `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(q)}&mode=ArtList&maxrecords=40&format=json&sort=DateDesc&timespan=24h`;
@@ -667,7 +702,7 @@ async function fetchTensions() {
     const r = await fetchTimeout(url, {}, 9000);
     if (!r.ok) throw new Error('GDELT ' + r.status);
     const j = await r.json();
-    state.tensions = (j.articles || []).map((a) => ({
+    const articles = (j.articles || []).map((a) => ({
       title: a.title,
       url: a.url,
       domain: a.domain,
@@ -675,6 +710,23 @@ async function fetchTensions() {
       country: a.sourcecountry,
       language: a.language,
     }));
+
+    // Translate non-English headlines via MyMemory (cached). Capped at first
+    // ~20 to stay inside the free 5000-char/day quota.
+    const candidates = articles.slice(0, 20)
+      .map((it, i) => ({ it, i, code: langToCode(it.language) }))
+      .filter((x) => x.code && x.code !== 'en');
+    await Promise.all(candidates.map(async ({ it, code }) => {
+      try {
+        const en = await translate(it.title, code, 'en');
+        if (en && en !== it.title) {
+          it.originalTitle = it.title;
+          it.title = en;
+        }
+      } catch {}
+    }));
+
+    state.tensions = articles;
     cacheSet('tensions', state.tensions);
   } catch (e) {
     console.warn('[gdelt]', e.message);
@@ -1774,19 +1826,30 @@ function renderTensionsView() {
   if (!state.tensions.length) {
     return `<div class="empty">GDELT 2.0 returned no rows in last 24h, or rate-limited. Retry shortly.</div>`;
   }
-  const head = `<div class="section-head">GDELT 2.0 TENSION FEED <span class="sub">last 24h · conflict-tagged coverage</span></div>`;
-  const body = state.tensions.slice(0, 80).map((t) => `
-    <article class="item">
-      <div class="meta-row">
-        <span class="time">${fmtTimeUTC(t.date)}</span>
-        <span class="ago">−${fmtAgo(t.date)}</span>
-        <span class="src">${escapeHtml(t.domain || 'gdelt')}</span>
-        ${t.country ? `<span class="region">${escapeHtml(t.country.slice(0,3).toUpperCase())}</span>` : ''}
-      </div>
-      <a class="title" href="${escapeHtml(t.url)}" target="_blank" rel="noopener">${escapeHtml(t.title)}</a>
-      <div class="tag-row"><span class="tag tag-tension">TENSION</span></div>
-    </article>
-  `).join('');
+  const head = `<div class="section-head">GDELT 2.0 TENSION FEED <span class="sub">last 24h · auto-translated · conflict-tagged</span></div>`;
+  const body = state.tensions.slice(0, 80).map((t) => {
+    const code = langToCode(t.language);
+    const rtl = ['ar','he','fa','ur'].includes(code || '');
+    const langChip = t.language ? `<span class="region">${escapeHtml(String(t.language).slice(0, 3).toUpperCase())}</span>` : '';
+    const orig = t.originalTitle
+      ? `<div class="orig"${rtl ? ' dir="rtl"' : ''}>${escapeHtml(t.originalTitle)}</div>`
+      : '';
+    const trTag = t.originalTitle ? '<span class="tag tag-politics">TRANSLATED</span>' : '';
+    return `
+      <article class="item">
+        <div class="meta-row">
+          <span class="time">${fmtTimeUTC(t.date)}</span>
+          <span class="ago">−${fmtAgo(t.date)}</span>
+          <span class="src">${escapeHtml(t.domain || 'gdelt')}</span>
+          ${t.country ? `<span class="region">${escapeHtml(t.country.slice(0,3).toUpperCase())}</span>` : ''}
+          ${langChip}
+        </div>
+        <a class="title" href="${escapeHtml(t.url)}" target="_blank" rel="noopener">${escapeHtml(t.title)}</a>
+        ${orig}
+        <div class="tag-row"><span class="tag tag-tension">TENSION</span>${trTag}</div>
+      </article>
+    `;
+  }).join('');
   return head + body;
 }
 
@@ -1964,11 +2027,30 @@ async function refresh() {
   refreshing = false;
 }
 
+const CITY_TZ = [
+  { id: 'ct-utc', tz: 'UTC' },
+  { id: 'ct-dxb', tz: 'Asia/Dubai' },
+  { id: 'ct-ruh', tz: 'Asia/Riyadh' },
+  { id: 'ct-tlv', tz: 'Asia/Jerusalem' },
+  { id: 'ct-lon', tz: 'Europe/London' },
+  { id: 'ct-nyc', tz: 'America/New_York' },
+  { id: 'ct-sgp', tz: 'Asia/Singapore' },
+];
+
 function tickClock() {
   const d = new Date();
   const utc = d.toISOString().slice(11, 19) + 'Z';
   const cl = $('#clock'); if (cl) cl.textContent = utc;
   const ht = $('#hud-time'); if (ht) ht.textContent = utc;
+  for (const c of CITY_TZ) {
+    const el = document.getElementById(c.id);
+    if (!el) continue;
+    try {
+      el.textContent = new Intl.DateTimeFormat('en-GB', {
+        timeZone: c.tz, hour: '2-digit', minute: '2-digit', hour12: false,
+      }).format(d);
+    } catch { el.textContent = '—'; }
+  }
 }
 
 function bindTabs() {
