@@ -339,7 +339,6 @@ const LIVE_CHANNELS = [
   { channelId: 'UCknLrEdhRCp1aegoMqRaCZg', name: 'DW NEWS',          desk: 'BERLIN · DE' },
   { channelId: 'UC7fWeaHhqgM4Ry-RMpM2YYw', name: 'TRT WORLD',        desk: 'ISTANBUL · TR' },
   { channelId: 'UCeY0bbntWzzVIaj2z3QigXg', name: 'NBC NEWS NOW',     desk: 'NEW YORK · US' },
-  { channelId: 'UCpVm7bg6pXKo1Pr6k5kxG9A', name: 'NAT GEO',          desk: 'WASHINGTON · US' },
 ];
 
 const LIVE_AUTO_LOAD = 4;
