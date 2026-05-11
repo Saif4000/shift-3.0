@@ -28,6 +28,25 @@ const BROWSER_HEADERS = {
   'Cache-Control': 'no-cache',
 };
 
+/**
+ * Per-host header override. Reddit's ToS requires a uniquely-identifying UA
+ * in '<platform>:<app>:<version> (by /u/<user>)' format — Mozilla strings
+ * get 429'd from datacenter IPs. RSSHub instances expect a project UA.
+ */
+function headersFor(parsedUrl) {
+  const host = parsedUrl.hostname;
+  if (host.endsWith('reddit.com')) {
+    return {
+      'User-Agent': 'web:shift-2.0-intel-terminal:v2.0 (by /u/anon)',
+      'Accept': 'application/atom+xml, application/xml;q=0.9, */*;q=0.5',
+    };
+  }
+  if (host.endsWith('rsshub.app') || host.endsWith('rsshub.pseudoyu.com')) {
+    return { 'User-Agent': 'shift-2.0/2.0 (+https://shift-2-0.vercel.app)' };
+  }
+  return BROWSER_HEADERS;
+}
+
 export default async function handler(request) {
   const u = new URL(request.url);
   const target = u.searchParams.get('url');
@@ -45,7 +64,21 @@ export default async function handler(request) {
   }
 
   try {
-    const r = await fetch(parsed.toString(), { headers: BROWSER_HEADERS, cache: 'no-store' });
+    let r = await fetch(parsed.toString(), {
+      headers: headersFor(parsed),
+      cache: 'no-store',
+      redirect: 'follow',
+    });
+    // Retry once on 429/503 with the generic browser headers (in case the
+    // per-host UA is the thing being rate-limited).
+    if (r.status === 429 || r.status === 503) {
+      await new Promise((rs) => setTimeout(rs, 1200));
+      r = await fetch(parsed.toString(), {
+        headers: BROWSER_HEADERS,
+        cache: 'no-store',
+        redirect: 'follow',
+      });
+    }
     if (!r.ok) {
       return new Response(`Upstream ${r.status}`, {
         status: 502,

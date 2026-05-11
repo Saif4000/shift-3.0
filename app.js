@@ -86,21 +86,25 @@ const SOURCES = [
   { id: 'toi',     name: 'Times of Israel',   url: 'https://www.timesofisrael.com/feed/',                      region: 'IL',   lang: 'en' },
   { id: 'jp',      name: 'Jerusalem Post',    url: 'https://www.jpost.com/rss/rssfeedsfrontpage.aspx',         region: 'IL',   lang: 'en' },
   { id: 'ynet',    name: 'Ynetnews',          url: 'https://www.ynetnews.com/Integration/StoryRss3082.xml',    region: 'IL',   lang: 'en' },
-  { id: 'haaretz', name: 'Haaretz EN',        url: 'https://www.haaretz.com/srv/htz-rss-eng',                  region: 'IL',   lang: 'en' },
+  { id: 'haaretz', name: 'Haaretz EN',        url: 'https://www.haaretz.com/srv/haaretz-latest-headlines',     region: 'IL',   lang: 'en' },
   { id: 'i24-rss', name: 'i24NEWS',           url: 'https://news.google.com/rss/search?q=site:i24news.tv&when:1d&hl=en-US&gl=US&ceid=US:en', region: 'IL', lang: 'en' },
-  { id: 'ihayom',  name: 'Israel Hayom',      url: 'https://www.israelhayom.com/feed/',                        region: 'IL',   lang: 'en' },
+  { id: 'ihayom',  name: 'Israel Hayom',      url: 'https://news.google.com/rss/search?q=site:israelhayom.com&when:2d&hl=en-US&gl=US&ceid=US:en', region: 'IL', lang: 'en' },
   { id: 'globes',  name: 'Globes (biz)',      url: 'https://news.google.com/rss/search?q=site:globes.co.il&when:1d&hl=en-US&gl=US&ceid=US:en', region: 'IL', lang: 'en' },
-  { id: 'arutz',   name: 'Israel Nat. News',  url: 'https://www.israelnationalnews.com/Rss.aspx',              region: 'IL',   lang: 'en' },
+  { id: 'arutz',   name: 'Israel Nat. News',  url: 'https://news.google.com/rss/search?q=site:israelnationalnews.com&when:2d&hl=en-US&gl=US&ceid=US:en', region: 'IL', lang: 'en' },
   { id: 'tn',      name: 'The National UAE',  url: 'https://www.thenationalnews.com/rss/uae',                  region: 'AE',   lang: 'en' },
   { id: 'tnmena',  name: 'The National MENA', url: 'https://www.thenationalnews.com/rss/mena',                 region: 'AE',   lang: 'en' },
   { id: 'an',      name: 'Arab News',         url: 'https://www.arabnews.com/rss.xml',                         region: 'SA',   lang: 'en' },
-  { id: 'kt',      name: 'Khaleej Times',     url: 'https://www.khaleejtimes.com/rss',                         region: 'AE',   lang: 'en' },
+  { id: 'kt',      name: 'Khaleej Times',     url: 'https://news.google.com/rss/search?q=site:khaleejtimes.com&when:2d&hl=en-US&gl=US&ceid=US:en', region: 'AE', lang: 'en' },
   // Middle East Eye removed — known editorial bias (Qatar-linked funding allegations).
 
-  // ---- UAE official / state channels ----
+  // ---- UAE official / state channels (verified May 2026) ----
+  { id: 'moi-en',   name: 'UAE MoI (EN)',        url: 'https://moi.gov.ae/en/rss/rss.aspx',                            region: 'AE-MOI', lang: 'en' },
+  { id: 'moi-ar',   name: 'UAE MoI (AR)',        url: 'https://moi.gov.ae/ar/rss/rss.aspx',                            region: 'AE-MOI', lang: 'ar' },
+  { id: 'dxb-pol',  name: 'Dubai Police YT',     url: 'https://www.youtube.com/feeds/videos.xml?channel_id=UCMebk44F_zVLj-7aD_mSUhQ', region: 'AE-POL', lang: 'en' },
+  { id: 'ad-pol',   name: 'Abu Dhabi Police YT', url: 'https://www.youtube.com/feeds/videos.xml?channel_id=UCLqu78o49yHSQTOUEWh_8Vg', region: 'AE-POL', lang: 'en' },
   { id: 'wam',      name: 'WAM (Emirates News)', url: 'https://news.google.com/rss/search?q=site:wam.ae&when:2d&hl=en-US&gl=US&ceid=US:en', region: 'AE-GOV', lang: 'en' },
-  { id: 'modgovae', name: 'UAE MoD',             url: 'https://rsshub.app/instagram/user/modgovae',                    region: 'AE-MOD', lang: 'en' },
-  { id: 'moiuae',   name: 'UAE MoI',             url: 'https://rsshub.app/instagram/user/moiuae',                      region: 'AE-MOI', lang: 'en' },
+  { id: 'modgovae', name: 'UAE MoD (IG)',        url: 'https://rsshub.app/instagram/user/modgovae',                    region: 'AE-MOD', lang: 'en' },
+  { id: 'moiuae-ig',name: 'UAE MoI (IG)',        url: 'https://rsshub.app/instagram/user/moiuae',                      region: 'AE-MOI', lang: 'en' },
   { id: 'barq',     name: 'UAE Barq',            url: 'https://rsshub.app/instagram/user/uae_barq_en',                 region: 'AE',    lang: 'en' },
   { id: 'mofa-ae',  name: 'UAE MoFA',            url: 'https://news.google.com/rss/search?q=%22UAE+Ministry+of+Foreign+Affairs%22+OR+site:mofaic.gov.ae&when:3d&hl=en-US&gl=US&ceid=US:en', region: 'AE-GOV', lang: 'en' },
   { id: 'uaegov',   name: 'UAE Government',      url: 'https://news.google.com/rss/search?q=site:u.ae+OR+%22UAE+Government+Media+Office%22&when:3d&hl=en-US&gl=US&ceid=US:en', region: 'AE-GOV', lang: 'en' },
@@ -130,7 +134,7 @@ const SOURCES = [
   { id: 'un',        name: 'UN News',         url: 'https://news.un.org/feed/subscribe/en/news/all/rss.xml',    region: 'UN',   lang: 'en' },
 
   // ---- Defense / geopolitics analysis ----
-  { id: 'dod',       name: 'DOD News',        url: 'https://www.defense.gov/DesktopModules/ArticleCS/RSS.ashx?ContentType=1&Site=945&max=20', region: 'US',  lang: 'en' },
+  { id: 'dod',       name: 'War Dept (DOD)',  url: 'https://www.war.gov/DesktopModules/ArticleCS/RSS.ashx?ContentType=1&Site=945&max=20', region: 'US',  lang: 'en' },
   { id: 'state',     name: 'State Dept',      url: 'https://news.google.com/rss/search?q=site:state.gov&when:1d&hl=en-US&gl=US&ceid=US:en', region: 'US',  lang: 'en' },
   { id: 'diplomat',  name: 'The Diplomat',    url: 'https://thediplomat.com/feed/',                              region: 'ANALYSIS', lang: 'en' },
   { id: 'stratfor',  name: 'Stratfor',        url: 'https://news.google.com/rss/search?q=site:stratfor.com&when:2d&hl=en-US&gl=US&ceid=US:en', region: 'ANALYSIS', lang: 'en' },

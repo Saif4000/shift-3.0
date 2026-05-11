@@ -5,7 +5,9 @@
  */
 
 export const config = {
-  matcher: '/((?!_vercel|_next|favicon\\.ico|robots\\.txt).*)',
+  // /api/cron/* is hit by Vercel Pro cron with its own Bearer secret, not
+  // a user session — skip the password gate for those paths.
+  matcher: '/((?!_vercel|_next|favicon\\.ico|robots\\.txt|api/cron).*)',
 };
 
 /* Hash sourced from Vercel env var SHIFT_PASSWORD_HASH (set via dashboard

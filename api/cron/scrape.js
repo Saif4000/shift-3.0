@@ -1,0 +1,101 @@
+/**
+ * /api/cron/scrape — Vercel Pro cron job.
+ *
+ * Runs every 10 minutes (configured in vercel.json). Pings the /api/news
+ * proxy for every known feed URL so the edge cache stays warm. When users
+ * open the dashboard, the news deck is already populated — no waterfall
+ * of 30+ slow upstream fetches.
+ *
+ * Auth: same `Authorization: Bearer <CRON_SECRET>` pattern.
+ */
+
+export const config = { runtime: 'edge' };
+
+const FEED_URLS = [
+  // Regional / MENA
+  'https://www.aljazeera.com/xml/rss/all.xml',
+  'https://www.timesofisrael.com/feed/',
+  'https://www.jpost.com/rss/rssfeedsfrontpage.aspx',
+  'https://www.ynetnews.com/Integration/StoryRss3082.xml',
+  'https://www.haaretz.com/srv/htz-rss-eng',
+  'https://www.israelhayom.com/feed/',
+  'https://www.israelnationalnews.com/Rss.aspx',
+  'https://www.thenationalnews.com/rss/uae',
+  'https://www.thenationalnews.com/rss/mena',
+  'https://www.arabnews.com/rss.xml',
+  'https://www.khaleejtimes.com/rss',
+  'https://feeds.bbci.co.uk/news/world/middle_east/rss.xml',
+  'https://www.alarabiya.net/.mrss/ar.xml',
+  // US wires
+  'https://rss.nytimes.com/services/xml/rss/nyt/World.xml',
+  'https://rss.nytimes.com/services/xml/rss/nyt/Business.xml',
+  'https://feeds.a.dj.com/rss/RSSMarketsMain.xml',
+  'https://feeds.a.dj.com/rss/RSSWorldNews.xml',
+  'http://rss.cnn.com/rss/cnn_topstories.rss',
+  'http://rss.cnn.com/rss/cnn_world.rss',
+  // Multilateral
+  'https://www.who.int/rss-feeds/news-english.xml',
+  'https://news.un.org/feed/subscribe/en/news/all/rss.xml',
+  // Defense / analysis
+  'https://www.defense.gov/DesktopModules/ArticleCS/RSS.ashx?ContentType=1&Site=945&max=20',
+  'https://thediplomat.com/feed/',
+  // Reddit
+  'https://www.reddit.com/r/worldnews/.rss?limit=25',
+  'https://www.reddit.com/r/MiddleEastNews/.rss?limit=25',
+  'https://www.reddit.com/r/geopolitics/.rss?limit=25',
+  'https://www.reddit.com/r/syriancivilwar/.rss?limit=25',
+  // AI / tech
+  'https://techcrunch.com/category/artificial-intelligence/feed/',
+  'https://www.theverge.com/rss/ai-artificial-intelligence/index.xml',
+  'https://www.technologyreview.com/feed/',
+  // UAE official
+  'https://moi.gov.ae/en/rss/rss.aspx',
+  'https://moi.gov.ae/ar/rss/rss.aspx',
+  'https://www.youtube.com/feeds/videos.xml?channel_id=UCMebk44F_zVLj-7aD_mSUhQ',
+  'https://www.youtube.com/feeds/videos.xml?channel_id=UCLqu78o49yHSQTOUEWh_8Vg',
+];
+
+const json = (status, payload) => new Response(JSON.stringify(payload), {
+  status,
+  headers: { 'content-type': 'application/json; charset=utf-8' },
+});
+
+export default async function handler(request) {
+  const secret = process.env.CRON_SECRET;
+  if (secret) {
+    const auth = request.headers.get('authorization') || '';
+    if (auth !== `Bearer ${secret}`) {
+      return json(401, { ok: false, error: 'cron unauthorized' });
+    }
+  }
+
+  const origin = new URL(request.url).origin;
+  const t0 = Date.now();
+
+  // Fire all in parallel but cap concurrency to avoid burning function time
+  const BATCH = 8;
+  const buckets = [];
+  for (let i = 0; i < FEED_URLS.length; i += BATCH) {
+    buckets.push(FEED_URLS.slice(i, i + BATCH));
+  }
+
+  const status = { warm: 0, fail: 0, total: FEED_URLS.length };
+  for (const bucket of buckets) {
+    await Promise.allSettled(
+      bucket.map(async (feed) => {
+        try {
+          const r = await fetch(`${origin}/api/news?url=${encodeURIComponent(feed)}`, { cache: 'no-store' });
+          if (r.ok) status.warm++;
+          else status.fail++;
+        } catch { status.fail++; }
+      })
+    );
+  }
+
+  return json(200, {
+    ok: true,
+    at: new Date().toISOString(),
+    durationMs: Date.now() - t0,
+    ...status,
+  });
+}
