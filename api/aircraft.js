@@ -23,12 +23,17 @@ const PRESETS = {
   global: { lat: 25.0, lon: 30.0, radius: 1500 },
 };
 
-const json = (status, payload) =>
+/* maxAgeSec controls the edge cache. Community ADS-B feeds are free so we
+ * keep them tight (20s). AirLabs free tier is 1000 calls/month total, so the
+ * AirLabs path gets a 10-minute cache — worst case ~144 upstream/day. */
+const json = (status, payload, maxAgeSec = 20) =>
   new Response(JSON.stringify(payload), {
     status,
     headers: {
       'content-type': 'application/json; charset=utf-8',
-      'cache-control': status === 200 ? 'public, s-maxage=20, stale-while-revalidate=60' : 'no-store',
+      'cache-control': status === 200
+        ? `public, s-maxage=${maxAgeSec}, stale-while-revalidate=${maxAgeSec * 3}`
+        : 'no-store',
     },
   });
 
@@ -84,13 +89,16 @@ export default async function handler(request) {
         const arr = j?.response || [];
         if (Array.isArray(arr) && arr.length) {
           const states = arr.map(airlabsToOpenSky).filter(Boolean);
+          // 10-minute edge cache for AirLabs to stay under the 1000/month
+          // free quota (worst case ~144 upstream calls/day).
           return json(200, {
             ok: true, preset,
             center: { lat: p.lat, lon: p.lon, radius_nm: p.radius },
             source: 'airlabs',
+            airborne: states.filter((s) => !s[8]).length,
             time: Math.floor(Date.now() / 1000),
             states,
-          });
+          }, 600);
         }
       }
     } catch (e) { /* fall through */ }
