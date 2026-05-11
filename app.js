@@ -515,20 +515,21 @@ function mergeAndDedupe(items) {
 async function fetchAllNews() {
   const buf = [];
   const tasks = getAllSources().map((src) =>
-    fetchSource(src).then((items) => {
+    tracked(() => fetchSource(src).then((items) => {
       if (!items.length) return;
       buf.push(...items);
       state.items = mergeAndDedupe(buf.concat(state.items));
-      // Re-render only news-list tabs (skip map/live to avoid disrupting them)
       if (!['map','live','markets','tensions','sources'].includes(activeTab) && !state.searchActive) {
         renderContent();
       }
       renderBanner();
+      renderThreatWatch();
       updateFooter();
-    })
+    }))
   );
   await Promise.allSettled(tasks);
   cacheSet('news', state.items.slice(0, 200));
+  renderThreatWatch();
 }
 
 /* ============================================================
@@ -806,25 +807,33 @@ function parseGdeltDate(s) {
  *   10:hdg    11:vert_rate
  * ============================================================ */
 async function fetchAircraft() {
-  const { lamin, lamax, lomin, lomax } = (MAP_PRESETS[activePreset] || MAP_PRESETS.mena).bbox;
+  // Primary: server-side /api/aircraft (shared edge cache + optional auth =
+  // way more reliable than client-side anon OpenSky which kept exhausting).
+  try {
+    const r = await fetchTimeout(`/api/aircraft?preset=${encodeURIComponent(activePreset)}`, {}, 12000);
+    if (r.ok) {
+      const j = await r.json();
+      if (j.ok && Array.isArray(j.states)) {
+        state.aircraft = j.states.filter((s) => s[5] != null && s[6] != null);
+        state.aircraftFetchedAt = Date.now();
+        cacheSet('aircraft', { at: Date.now(), preset: activePreset, states: state.aircraft });
+        return;
+      }
+    }
+  } catch (e) { console.warn('[aircraft-api]', e.message); }
+
+  // Last-resort direct fallback
+  const { lamin, lamax, lomin, lomax } = (MAP_PRESETS[activePreset] || MAP_PRESETS.uae).bbox;
   const url = `https://opensky-network.org/api/states/all?lamin=${lamin}&lamax=${lamax}&lomin=${lomin}&lomax=${lomax}`;
-  let j;
   try {
     const r = await fetchTimeout(url, { cache: 'no-store' }, 9000);
-    if (!r.ok) throw new Error('OpenSky ' + r.status);
-    j = await r.json();
-  } catch (e1) {
-    try {
-      const r = await proxyFetch(url);
-      j = await r.json();
-    } catch (e2) {
-      console.warn('[opensky]', e1.message, '|', e2.message);
-      return;
+    if (r.ok) {
+      const j = await r.json();
+      state.aircraft = (j?.states || []).filter((s) => s[5] != null && s[6] != null);
+      state.aircraftFetchedAt = Date.now();
+      cacheSet('aircraft', { at: Date.now(), preset: activePreset, states: state.aircraft });
     }
-  }
-  state.aircraft = (j?.states || []).filter((s) => s[5] != null && s[6] != null);
-  state.aircraftFetchedAt = Date.now();
-  cacheSet('aircraft', { at: Date.now(), preset: activePreset, states: state.aircraft });
+  } catch (e) { console.warn('[opensky-direct]', e.message); }
 }
 
 /* ============================================================
@@ -2116,6 +2125,16 @@ const CITY_TZ = [
   { id: 'ct-sgp', tz: 'Asia/Singapore' },
 ];
 
+/* Visible world-clock strip — different set than the Zulu tooltip */
+const WORLD_CLOCKS = [
+  { id: 'wc-auh', tz: 'Asia/Dubai' },
+  { id: 'wc-muc', tz: 'Europe/Berlin' },
+  { id: 'wc-dca', tz: 'America/New_York' },
+  { id: 'wc-lax', tz: 'America/Los_Angeles' },
+  { id: 'wc-hkg', tz: 'Asia/Hong_Kong' },
+  { id: 'wc-ccs', tz: 'America/Caracas' },
+];
+
 function tickClock() {
   const d = new Date();
   const utc = d.toISOString().slice(11, 19) + 'Z';
@@ -2130,6 +2149,84 @@ function tickClock() {
       }).format(d);
     } catch { el.textContent = '—'; }
   }
+  for (const c of WORLD_CLOCKS) {
+    const el = document.getElementById(c.id);
+    if (!el) continue;
+    try {
+      el.textContent = new Intl.DateTimeFormat('en-GB', {
+        timeZone: c.tz, hour: '2-digit', minute: '2-digit', hour12: false,
+      }).format(d);
+    } catch { el.textContent = '—'; }
+  }
+}
+
+/* ============================================================
+ * INFLIGHT INDICATOR — toggles body.fetching while any wrapped
+ * network call is in flight, so the cyan ⟳ next to LIVE animates.
+ * ============================================================ */
+let inflightCount = 0;
+function inflightStart() {
+  inflightCount++;
+  document.body.classList.add('fetching');
+}
+function inflightEnd() {
+  inflightCount = Math.max(0, inflightCount - 1);
+  if (inflightCount === 0) document.body.classList.remove('fetching');
+}
+async function tracked(fn) {
+  inflightStart();
+  try { return await fn(); }
+  finally { inflightEnd(); }
+}
+
+/* ============================================================
+ * THREAT TRACKER — scans cached items for interception events.
+ *   - Drone (UAV / loitering munition / Shahed / Reaper / etc)
+ *   - Ballistic missile (SRBM/MRBM/IRBM)
+ *   - Cruise missile (Tomahawk / Kalibr / Storm Shadow / etc)
+ * Compares last 24h count vs prior 24h count for ▲/▬/▼ delta.
+ * ============================================================ */
+const INTERCEPT_RE = /\b(intercept(ed|ing)?|shot[- ]?down|shoot[- ]?down|downed|destroyed|neutrali[sz]e[ds]?|engaged and (?:destroyed|kill)|knocked[- ]?down|takedown|brought[- ]?down|hit by [A-Z][A-Z0-9-]+)/i;
+const THREAT_RE = {
+  drone:     /\b(drone|UAV|unmanned aerial|loitering munition|kamikaze drone|suicide drone|Shahed|quadcopter|hexacopter|Reaper|Predator)\b/i,
+  ballistic: /\b(ballistic missile|SRBM|MRBM|IRBM|hypersonic|Iskander|Scud|Fateh|Burkan|Toophan|Qiam)\b/i,
+  cruise:    /\b(cruise missile|Tomahawk|Kalibr|Storm Shadow|SCALP|Quds|Paveh|Soumar|Hoveyzeh|land[- ]?attack cruise|anti[- ]?ship missile)\b/i,
+};
+
+function computeThreats() {
+  const now = Date.now();
+  const day = 86_400_000;
+  const counts = { drone: [0, 0], ballistic: [0, 0], cruise: [0, 0] };
+  for (const it of state.items) {
+    const age = now - (it.date instanceof Date ? it.date.getTime() : new Date(it.date).getTime());
+    if (isNaN(age)) continue;
+    const bucket = age < day ? 0 : age < 2 * day ? 1 : null;
+    if (bucket === null) continue;
+    const text = it.title + ' ' + (it.summary || '');
+    if (!INTERCEPT_RE.test(text)) continue;
+    if (THREAT_RE.drone.test(text))     counts.drone[bucket]++;
+    if (THREAT_RE.ballistic.test(text)) counts.ballistic[bucket]++;
+    if (THREAT_RE.cruise.test(text))    counts.cruise[bucket]++;
+  }
+  return counts;
+}
+
+function renderThreatWatch() {
+  const c = computeThreats();
+  const apply = (today, prev, valId, delId) => {
+    const valEl = document.getElementById(valId);
+    const delEl = document.getElementById(delId);
+    if (!valEl || !delEl) return;
+    valEl.textContent = String(today);
+    let cls = 'same', txt = '▬';
+    if (today > prev) { cls = 'up';   txt = '▲' + (today - prev); }
+    else if (today < prev) { cls = 'down'; txt = '▼' + (prev - today); }
+    delEl.className = 'tw-delta ' + cls;
+    delEl.textContent = txt;
+  };
+  apply(c.drone[0],     c.drone[1],     'tw-drone',     'tw-drone-d');
+  apply(c.ballistic[0], c.ballistic[1], 'tw-ballistic', 'tw-ballistic-d');
+  apply(c.cruise[0],    c.cruise[1],    'tw-cruise',    'tw-cruise-d');
 }
 
 function bindTabs() {
@@ -2160,13 +2257,14 @@ function preload() {
     fetchAllNews().then(() => {
       renderContent();
       renderBanner();
+      renderThreatWatch();
       updateFooter();
     }),
-    fetchMarkets().then(renderTicker),
-    fetchOilPriceAPI(),  // overlays oil spot prices when key is configured
-    fetchFX().then(() => { renderTicker(); renderStatusStrip(); }),
-    fetchCrypto().then(() => { renderTicker(); renderStatusStrip(); }),
-    fetchTensions().then(() => { if (activeTab === 'tensions') renderContent(); }),
+    tracked(() => fetchMarkets().then(renderTicker)),
+    tracked(fetchOilPriceAPI),
+    tracked(() => fetchFX().then(() => { renderTicker(); renderStatusStrip(); })),
+    tracked(() => fetchCrypto().then(() => { renderTicker(); renderStatusStrip(); })),
+    tracked(() => fetchTensions().then(() => { if (activeTab === 'tensions') renderContent(); })),
   ]).then(() => {
     state.lastUpdate = new Date();
     updateFooter();

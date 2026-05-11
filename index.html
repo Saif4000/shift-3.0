@@ -84,7 +84,25 @@
       </span>
       <button id="refresh" class="refresh-btn" title="Refresh">↻</button>
       <span class="live"><span class="dot"></span>LIVE</span>
+      <span class="dataflow" id="dataflow" title="data sync">⟳</span>
     </div>
+  </div>
+
+  <div class="world-clocks" id="world-clocks">
+    <span class="wc-cell" title="Abu Dhabi"><b>AUH</b><span id="wc-auh">--:--</span></span>
+    <span class="wc-cell" title="Munich"><b>MUC</b><span id="wc-muc">--:--</span></span>
+    <span class="wc-cell" title="Washington DC"><b>DCA</b><span id="wc-dca">--:--</span></span>
+    <span class="wc-cell" title="Los Angeles"><b>LAX</b><span id="wc-lax">--:--</span></span>
+    <span class="wc-cell" title="Hong Kong"><b>HKG</b><span id="wc-hkg">--:--</span></span>
+    <span class="wc-cell" title="Caracas"><b>CCS</b><span id="wc-ccs">--:--</span></span>
+  </div>
+
+  <div class="threat-watch" id="threat-watch">
+    <span class="tw-tag">▮ THREAT WATCH</span>
+    <span class="tw-cell"><b>DRONES</b><span id="tw-drone">0</span><span class="tw-delta" id="tw-drone-d">▬</span></span>
+    <span class="tw-cell"><b>BAL MSL</b><span id="tw-ballistic">0</span><span class="tw-delta" id="tw-ballistic-d">▬</span></span>
+    <span class="tw-cell"><b>CRUISE</b><span id="tw-cruise">0</span><span class="tw-delta" id="tw-cruise-d">▬</span></span>
+    <span class="tw-sub">last 24h · Δ vs prior 24h · GCC + region · monotonic-by-nature</span>
   </div>
 
   <div class="banner" id="breaking-banner">
