@@ -30,47 +30,37 @@ export default async function handler(request) {
   } catch {}
   const bbox = PRESETS[preset] || PRESETS.uae;
 
-  const url = `https://opensky-network.org/api/states/all?lamin=${bbox.lamin}&lamax=${bbox.lamax}&lomin=${bbox.lomin}&lomax=${bbox.lomax}`;
-  const diag = new URL(request.url).searchParams.get('diag');
-  if (diag === '1') {
-    // Sanity check — can this function fetch anything at all?
-    const probes = [
-      'https://api.github.com',
-      'https://opensky-network.org',
-      'https://opensky-network.org/api/states/all?lamin=20&lamax=21&lomin=49&lomax=50',
-    ];
-    const results = await Promise.all(probes.map(async (u) => {
-      try {
-        const r = await fetch(u, { cache: 'no-store' });
-        return { u, status: r.status, ok: r.ok };
-      } catch (e) { return { u, error: String(e?.message || e) }; }
-    }));
-    return json(200, { diag: true, probes: results });
-  }
+  const openskyUrl = `https://opensky-network.org/api/states/all?lamin=${bbox.lamin}&lamax=${bbox.lamax}&lomin=${bbox.lomin}&lomax=${bbox.lomax}`;
 
-  const headers = {
-    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    'Accept': 'application/json, text/plain, */*',
-    'Accept-Language': 'en-US,en;q=0.9',
-  };
-  const user = process.env.OPENSKY_USER;
-  const pass = process.env.OPENSKY_PASS;
-  if (user && pass) {
-    headers['Authorization'] = 'Basic ' + btoa(`${user}:${pass}`);
-  }
+  // Vercel Edge Runtime cannot connect directly to opensky-network.org
+  // (confirmed by probe). Route through AllOrigins which proxies it cleanly.
+  const proxied = [
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(openskyUrl)}`,
+    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(openskyUrl)}`,
+  ];
 
   try {
-    const r = await fetch(url, { headers, cache: 'no-store' });
-    if (!r.ok) {
-      const body = await r.text().catch(() => '');
-      return json(200, { ok: false, error: 'OpenSky HTTP ' + r.status, preset, bodyPreview: body.slice(0, 200) });
+    let r, lastErr;
+    for (const u of proxied) {
+      try {
+        r = await fetch(u, { cache: 'no-store' });
+        if (r.ok) break;
+        lastErr = 'HTTP ' + r.status;
+      } catch (e) { lastErr = String(e?.message || e); }
     }
-    const j = await r.json();
+    if (!r || !r.ok) {
+      return json(200, { ok: false, error: 'all proxies failed', detail: lastErr, preset });
+    }
+    const text = await r.text();
+    let j;
+    try { j = JSON.parse(text); }
+    catch (e) {
+      return json(200, { ok: false, error: 'proxy returned non-JSON', preview: text.slice(0, 200), preset });
+    }
     return json(200, {
       ok: true,
       preset,
       bbox,
-      authed: !!user,
       time: j?.time || null,
       states: j?.states || [],
     });
