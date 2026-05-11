@@ -1011,6 +1011,28 @@ body.fetching .dataflow {
   .map-hud { font-size: 9px; padding: 4px 6px; }
 }
 
+.airport-civil, .mil-base { background: none !important; border: none !important; }
+.airport-civil svg, .mil-base svg { filter: drop-shadow(0 0 2px rgba(0,0,0,0.85)); }
+
+/* Leaflet tooltip in terminal style */
+.leaflet-tooltip {
+  background: rgba(0,0,0,0.92) !important;
+  color: var(--amber) !important;
+  border: 1px solid var(--amber-dim) !important;
+  font-family: var(--mono) !important;
+  font-size: 10px !important;
+  padding: 4px 7px !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  white-space: nowrap;
+  letter-spacing: 0.3px;
+}
+.leaflet-tooltip b { color: var(--white); }
+.leaflet-tooltip-top:before,
+.leaflet-tooltip-bottom:before,
+.leaflet-tooltip-left:before,
+.leaflet-tooltip-right:before { display: none; }
+
 .choke-marker { background: none !important; border: none !important; }
 .choke-label {
   color: var(--magenta); font-size: 9px; font-weight: 700; letter-spacing: 0.8px;
@@ -1338,8 +1360,8 @@ kbd {
 .map-mode {
   position: absolute;
   z-index: 470;
-  top: 50px;
-  left: 10px;
+  bottom: 10px;
+  right: 10px;
   display: flex;
   gap: 1px;
   border: 1px solid var(--amber-dim);

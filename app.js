@@ -218,6 +218,84 @@ const MAP_PRESETS = {
 };
 let activePreset = 'uae';
 
+/* Civil airports — major GCC + neighboring */
+const AIRPORTS_CIVIL = [
+  { code:'DXB',name:'Dubai Intl',           lat:25.2532, lon:55.3657, country:'AE' },
+  { code:'AUH',name:'Abu Dhabi Intl',       lat:24.4330, lon:54.6511, country:'AE' },
+  { code:'SHJ',name:'Sharjah Intl',         lat:25.3286, lon:55.5172, country:'AE' },
+  { code:'DWC',name:'Al Maktoum',           lat:24.8967, lon:55.1614, country:'AE' },
+  { code:'AAN',name:'Al Ain',               lat:24.2617, lon:55.6092, country:'AE' },
+  { code:'RKT',name:'Ras al Khaimah',       lat:25.6135, lon:55.9388, country:'AE' },
+  { code:'FJR',name:'Fujairah',             lat:25.1122, lon:56.3240, country:'AE' },
+  { code:'RUH',name:'Riyadh Intl',          lat:24.9576, lon:46.6988, country:'SA' },
+  { code:'JED',name:'Jeddah Intl',          lat:21.6796, lon:39.1565, country:'SA' },
+  { code:'DMM',name:'Dammam',               lat:26.4712, lon:49.7980, country:'SA' },
+  { code:'MED',name:'Madinah',              lat:24.5534, lon:39.7051, country:'SA' },
+  { code:'AHB',name:'Abha',                 lat:18.2404, lon:42.6566, country:'SA' },
+  { code:'DOH',name:'Doha Hamad',           lat:25.2731, lon:51.6080, country:'QA' },
+  { code:'BAH',name:'Bahrain Intl',         lat:26.2708, lon:50.6336, country:'BH' },
+  { code:'KWI',name:'Kuwait Intl',          lat:29.2266, lon:47.9689, country:'KW' },
+  { code:'MCT',name:'Muscat',               lat:23.5933, lon:58.2844, country:'OM' },
+  { code:'SLL',name:'Salalah',              lat:17.0387, lon:54.0913, country:'OM' },
+  { code:'IKA',name:'Tehran Imam Khomeini', lat:35.4161, lon:51.1522, country:'IR' },
+  { code:'THR',name:'Tehran Mehrabad',      lat:35.6892, lon:51.3134, country:'IR' },
+  { code:'BND',name:'Bandar Abbas',         lat:27.2183, lon:56.3779, country:'IR' },
+  { code:'BUZ',name:'Bushehr',              lat:28.9447, lon:50.8347, country:'IR' },
+  { code:'IFN',name:'Isfahan',              lat:32.7508, lon:51.8613, country:'IR' },
+  { code:'SYZ',name:'Shiraz',               lat:29.5392, lon:52.5897, country:'IR' },
+  { code:'TLV',name:'Ben Gurion',           lat:32.0114, lon:34.8867, country:'IL' },
+  { code:'HFA',name:'Haifa',                lat:32.8094, lon:35.0431, country:'IL' },
+  { code:'ETM',name:'Ramon',                lat:29.7236, lon:35.0117, country:'IL' },
+  { code:'AMM',name:'Amman Queen Alia',     lat:31.7227, lon:35.9933, country:'JO' },
+  { code:'BEY',name:'Beirut Intl',          lat:33.8208, lon:35.4884, country:'LB' },
+  { code:'CAI',name:'Cairo Intl',           lat:30.1219, lon:31.4056, country:'EG' },
+  { code:'SSH',name:'Sharm El Sheikh',      lat:27.9773, lon:34.3950, country:'EG' },
+  { code:'BGW',name:'Baghdad Intl',         lat:33.2625, lon:44.2346, country:'IQ' },
+  { code:'BSR',name:'Basra',                lat:30.5491, lon:47.6624, country:'IQ' },
+  { code:'EBL',name:'Erbil',                lat:36.2376, lon:43.9632, country:'IQ' },
+  { code:'SAH',name:"Sana'a",               lat:15.4763, lon:44.2197, country:'YE' },
+];
+
+/* Known military bases — region-relevant. Sources: published basing
+ * agreements, defence press releases, mil-aviation press. */
+const MIL_BASES = [
+  // US forward operating in CENTCOM AOR
+  { code:'OUD', name:'Al Udeid AB',          lat:25.1175, lon:51.3150, country:'QA', op:'US Air Force / Qatar' },
+  { code:'NSA', name:'NSA Bahrain · 5th Fleet',lat:26.2065,lon:50.6080,country:'BH', op:'US Navy' },
+  { code:'ADH', name:'Al Dhafra AB',         lat:24.2483, lon:54.5478, country:'AE', op:'UAE AF · US co-located' },
+  { code:'ALS', name:'Ali Al Salem AB',      lat:29.3467, lon:47.5208, country:'KW', op:'Kuwait AF · US' },
+  { code:'ARF', name:'Camp Arifjan',         lat:28.9433, lon:48.0867, country:'KW', op:'US Army' },
+  { code:'AAS', name:'Al Asad AB',           lat:33.7856, lon:42.4413, country:'IQ', op:'Iraq · US' },
+  { code:'MUW', name:'Muwaffaq Salti AB',    lat:31.8345, lon:36.7882, country:'JO', op:'Jordan AF · US' },
+  { code:'EBLM',name:'Erbil Air Base',       lat:36.2376, lon:43.9632, country:'IQ', op:'Coalition / KRG' },
+  { code:'INC', name:'Incirlik AB',          lat:37.0021, lon:35.4259, country:'TR', op:'Turkey · US' },
+  { code:'CLM', name:'Camp Lemonnier',       lat:11.5475, lon:43.1597, country:'DJ', op:'US Navy / CJTF-HOA' },
+  { code:'DGA', name:'Diego Garcia',         lat:-7.3133, lon:72.4111, country:'IO', op:'US Navy / UK' },
+  // Saudi Arabia
+  { code:'PSU', name:'Prince Sultan AB',     lat:24.0628, lon:47.5805, country:'SA', op:'RSAF · US' },
+  { code:'KKH', name:'King Khalid AB',       lat:18.2974, lon:42.8035, country:'SA', op:'RSAF' },
+  { code:'KFB', name:'King Faisal AB Tabuk', lat:28.3645, lon:36.6189, country:'SA', op:'RSAF' },
+  // UAE
+  { code:'AMI', name:'Al Minhad AB',         lat:25.0273, lon:55.3661, country:'AE', op:'UAE AF · multi-national' },
+  { code:'AAW', name:'Al Bateen',            lat:24.4283, lon:54.4581, country:'AE', op:'UAE AF' },
+  { code:'SWH', name:'Sweihan range',        lat:24.4592, lon:55.3389, country:'AE', op:'UAE AF · air-to-air' },
+  // Oman
+  { code:'THU', name:'Thumrait AB',          lat:17.6660, lon:54.0254, country:'OM', op:'RAFO' },
+  { code:'MAS', name:'Masirah AB',           lat:20.6753, lon:58.8903, country:'OM', op:'RAFO · US (rotational)' },
+  // Israel
+  { code:'TNF', name:'Tel Nof AB',           lat:31.8395, lon:34.8217, country:'IL', op:'Israeli AF' },
+  { code:'HTZB',name:'Hatzerim AB',          lat:31.2367, lon:34.6627, country:'IL', op:'Israeli AF' },
+  { code:'HTZ', name:'Hatzor AB',            lat:31.7626, lon:34.7270, country:'IL', op:'Israeli AF' },
+  { code:'RMD', name:'Ramat David AB',       lat:32.6650, lon:35.1793, country:'IL', op:'Israeli AF' },
+  { code:'NVT', name:'Nevatim AB',           lat:31.2078, lon:35.0119, country:'IL', op:'Israeli AF · F-35' },
+  { code:'PLM', name:'Palmachim AB',         lat:31.8983, lon:34.6906, country:'IL', op:'Israeli AF / Space' },
+  // Iran
+  { code:'BNDN',name:'Bandar Abbas Naval',   lat:27.2167, lon:56.3667, country:'IR', op:'IRGCN · IRIN' },
+  { code:'BUZN',name:'Bushehr Naval',        lat:28.9550, lon:50.8367, country:'IR', op:'IRIN' },
+  { code:'QSM', name:'Qeshm Island AB',      lat:26.7547, lon:55.9023, country:'IR', op:'IRGC AF' },
+  { code:'SHZ', name:'Shahid Dastghaib · Shiraz',lat:29.5392,lon:52.5897,country:'IR', op:'IRIAF' },
+];
+
 /* Maritime chokepoints — mil-style markers w/ range rings (nautical miles) */
 const CHOKEPOINTS = [
   { code: 'HRMZ', name: 'STRAIT OF HORMUZ', lat: 26.566, lon: 56.250, rings_nm: [50, 100, 200] },
@@ -1164,6 +1242,12 @@ function initMapOnce() {
     const dtg = $('#hud-dtg'); if (dtg) dtg.textContent = `${lat}° · ${lon}°`;
   });
 
+  // ---- Airport + mil-base overlays (rendered once) ----
+  renderAirportsAndBases();
+
+  // ---- Plane dead-reckoning tick — makes tracks move between fetches ----
+  startPlaneTick();
+
   // ---- Periodic refresh, only while MAP tab visible ----
   // Render whatever we already have cached from preload first, so the map
   // shows planes immediately on first open.
@@ -1187,6 +1271,82 @@ function drawEngagementBox() {
     { color: '#5fc7ff', weight: 1, opacity: 0.45, fillOpacity: 0, dashArray: '8 6', interactive: false }
   ).addTo(leafletMap);
   const bb = $('#hud-bbox'); if (bb) bb.textContent = `${b.lamin}/${b.lamax}N · ${b.lomin}/${b.lomax}E`;
+}
+
+/* ============================================================
+ * AIRPORT / MIL-BASE LAYERS — rendered once on map init.
+ * ============================================================ */
+let civilLayer = null;
+let milLayer = null;
+
+function renderAirportsAndBases() {
+  if (!leafletMap) return;
+  if (civilLayer) leafletMap.removeLayer(civilLayer);
+  if (milLayer) leafletMap.removeLayer(milLayer);
+  civilLayer = L.layerGroup();
+  milLayer = L.layerGroup();
+
+  AIRPORTS_CIVIL.forEach((a) => {
+    L.marker([a.lat, a.lon], {
+      icon: L.divIcon({
+        className: 'airport-civil',
+        html: `<svg viewBox="0 0 14 14" width="12" height="12">` +
+              `<circle cx="7" cy="7" r="5" fill="rgba(0,230,118,0.18)" stroke="#00e676" stroke-width="1.4"/>` +
+              `<circle cx="7" cy="7" r="1.2" fill="#00e676"/>` +
+              `</svg>`,
+        iconSize: [12, 12], iconAnchor: [6, 6],
+      }),
+    }).bindTooltip(`<b>${a.code}</b> · ${a.country}<br>${a.name}`, { sticky: true })
+      .addTo(civilLayer);
+  });
+
+  MIL_BASES.forEach((b) => {
+    L.marker([b.lat, b.lon], {
+      icon: L.divIcon({
+        className: 'mil-base',
+        html: `<svg viewBox="0 0 14 14" width="12" height="12">` +
+              `<rect x="2" y="2" width="10" height="10" fill="rgba(255,51,68,0.22)" stroke="#ff3344" stroke-width="1.5"/>` +
+              `<path d="M2 2 L12 12 M2 12 L12 2" stroke="#ff3344" stroke-width="0.9"/>` +
+              `</svg>`,
+        iconSize: [12, 12], iconAnchor: [6, 6],
+      }),
+    }).bindTooltip(`<b>${b.code}</b> · MIL · ${b.country}<br>${b.name}<br><span style="color:#5fc7ff">${b.op}</span>`, { sticky: true })
+      .addTo(milLayer);
+  });
+
+  civilLayer.addTo(leafletMap);
+  milLayer.addTo(leafletMap);
+}
+
+/* ============================================================
+ * PLANE DEAD-RECKONING — between AirLabs fetches (10-min cache), advance
+ * each marker along its heading at its reported velocity so the map feels
+ * alive instead of frozen.
+ * ============================================================ */
+let planeTickTimer = null;
+const DEG_PER_RAD = Math.PI / 180;
+const M_PER_DEG_LAT = 111_111;
+
+function tickPlanes() {
+  if (activeTab !== 'map' || !leafletMap) return;
+  const dt = 1; // seconds per tick
+  for (const m of planeMarkers.values()) {
+    const s = m._dr;
+    if (!s || !s.vel || s.vel < 25) continue; // skip ground / slow tracks
+    const distM = s.vel * dt;
+    const hdgRad = s.hdg * DEG_PER_RAD;
+    const dLat = (distM * Math.cos(hdgRad)) / M_PER_DEG_LAT;
+    const cosLat = Math.cos(s.lat * DEG_PER_RAD) || 0.001;
+    const dLon = (distM * Math.sin(hdgRad)) / (M_PER_DEG_LAT * cosLat);
+    s.lat += dLat;
+    s.lon += dLon;
+    m.setLatLng([s.lat, s.lon]);
+  }
+}
+
+function startPlaneTick() {
+  if (planeTickTimer) clearInterval(planeTickTimer);
+  planeTickTimer = setInterval(tickPlanes, 1000);
 }
 
 function switchPreset(key) {
@@ -1277,6 +1437,14 @@ function renderAircraft() {
       m.setIcon(planeIcon(heading, s[7], onGround));
       m.setPopupContent(buildPlanePopup(s));
     }
+    // Dead-reckoning state: position, velocity (m/s), heading (deg), updatedAt.
+    // tickPlanes() advances each marker by vel*dt every second between fetches.
+    m._dr = {
+      lat, lon,
+      vel: typeof s[9] === 'number' ? s[9] : 0,
+      hdg: typeof heading === 'number' ? heading : 0,
+      t: Date.now(),
+    };
   }
 
   for (const [icao, m] of planeMarkers) {
