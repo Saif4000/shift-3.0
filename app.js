@@ -1466,6 +1466,24 @@ function clearTrack(icao) {
  * ============================================================ */
 let airspaceLayer = null;
 
+/** OpenAIP unit codes for altitude limits: 0=m, 1=ft, 6=FL */
+const AIRSPACE_UNIT = { 0: 'm', 1: 'ft', 6: 'FL' };
+/** OpenAIP reference datum: 0=GND, 1=AMSL, 2=STD (standard pressure) */
+const AIRSPACE_REF  = { 0: 'GND', 1: 'AMSL', 2: 'STD' };
+/** OpenAIP ICAO class codes */
+const AIRSPACE_CLASS = { 0: 'A', 1: 'B', 2: 'C', 3: 'D', 4: 'E', 5: 'F', 6: 'G', 7: 'SUA', 8: 'OTHER' };
+/** OpenAIP activity codes */
+const AIRSPACE_ACTIVITY = { 0: '—', 1: 'PARA', 2: 'GLD', 3: 'HG/PG', 4: 'BAL', 5: 'TFC', 6: 'MIL' };
+
+function fmtAltLimit(lim) {
+  if (!lim || lim.value == null) return '—';
+  const unit = AIRSPACE_UNIT[lim.unit] || '';
+  const ref  = AIRSPACE_REF[lim.referenceDatum] || '';
+  if (unit === 'FL') return `FL${lim.value}`;
+  if (lim.value === 0 && ref === 'GND') return 'GND';
+  return `${lim.value}${unit} ${ref}`;
+}
+
 /** OpenAIP airspace type codes (verified empirically against Gulf bbox):
  *   1 RESTRICTED/MTZ · 2 DANGER · 3 PROHIBITED · 4 CTR · 6 MBZ · 7 TMA ·
  *   10 FIR · 13 ATZ · 26 CTA · 28 SPEC USE · 29 WILDLIFE */
@@ -1500,9 +1518,24 @@ async function fetchAndRenderAirspace() {
       const geom = a.geometry;
       if (!geom || !geom.coordinates) return;
       const style = airspaceStyle(a.type);
-      const name = a.name || a.icaoClass || a.identifier || `airspace ${a.type}`;
+      const name = a.name || a.identifier || `airspace ${a.type}`;
+      const cls = AIRSPACE_CLASS[a.icaoClass] || '?';
+      const upper = fmtAltLimit(a.upperLimit);
+      const lower = fmtAltLimit(a.lowerLimit);
+      const country = a.country || '';
+      const activity = AIRSPACE_ACTIVITY[a.activity] || '';
+      const byNotam = a.byNotam ? '<span style="color:#ff3344">· NOTAM</span>' : '';
+      const onDemand = a.onDemand ? '<span style="color:#ffaa00">· on-demand</span>' : '';
+
+      const tooltip =
+        `<b>${escapeHtml(style.label)}</b> · CLS ${escapeHtml(cls)} · ${escapeHtml(country)}<br>` +
+        `<span style="color:#fff">${escapeHtml(name)}</span><br>` +
+        `<span style="color:#5fc7ff">${escapeHtml(upper)} ↓ ${escapeHtml(lower)}</span>` +
+        (activity !== '—' ? ` · ${escapeHtml(activity)}` : '') +
+        byNotam + onDemand;
+
       try {
-        L.geoJSON({ type: 'Feature', geometry: geom, properties: {} }, {
+        const layer = L.geoJSON({ type: 'Feature', geometry: geom, properties: {} }, {
           style: () => ({
             color: style.color,
             weight: style.weight,
@@ -1513,10 +1546,18 @@ async function fetchAndRenderAirspace() {
             pane: 'airspacePane',
             interactive: true,
           }),
-        }).bindTooltip(
-          `<b>${escapeHtml(style.label)}</b> · ${escapeHtml(name)}`,
-          { sticky: true }
-        ).addTo(airspaceLayer);
+        }).bindTooltip(tooltip, { sticky: true });
+
+        // Hover highlight — pop the polygon visually
+        layer.on('mouseover', (e) => {
+          const t = e.target || layer;
+          if (t.setStyle) t.setStyle({ weight: style.weight + 1.5, opacity: 0.95, fillOpacity: Math.min(0.18, style.fillOpacity * 4) });
+          if (t.bringToFront) t.bringToFront();
+        });
+        layer.on('mouseout', () => {
+          layer.setStyle({ weight: style.weight, opacity: style.opacity, fillOpacity: style.fillOpacity });
+        });
+        layer.addTo(airspaceLayer);
       } catch (e) { /* skip malformed */ }
     });
     airspaceLayer.addTo(leafletMap);
