@@ -148,6 +148,20 @@ const SOURCES = [
   { id: 'ai-news',   name: 'AI News',         url: 'https://news.google.com/rss/search?q=%22OpenAI%22+OR+%22Anthropic%22+OR+%22DeepMind%22+OR+(AI+model)&when:1d&hl=en-US&gl=US&ceid=US:en', region: 'TECH', lang: 'en' },
 ];
 
+/* User-tunable: how many headlines we keep per source. Persisted to
+ * localStorage so the slider value sticks across sessions. */
+const ITEMS_PER_SOURCE_KEY = 'shift:items-per-source';
+function getItemsPerSource() {
+  try {
+    const n = parseInt(localStorage.getItem(ITEMS_PER_SOURCE_KEY) || '40', 10);
+    if (n >= 5 && n <= 100) return n;
+  } catch {}
+  return 40;
+}
+function setItemsPerSource(n) {
+  try { localStorage.setItem(ITEMS_PER_SOURCE_KEY, String(n)); } catch {}
+}
+
 /* User-added sources (persisted in localStorage). Combined with SOURCES at fetch time. */
 let CUSTOM_SOURCES = [];
 function loadCustomSources() {
@@ -547,12 +561,13 @@ async function fetchSource(src) {
       const r = await proxyFetch(src.url);
       text = await r.text();
     }
-    let items = parseRSS(text, src).slice(0, 40);
+    const cap = getItemsPerSource();
+    let items = parseRSS(text, src).slice(0, cap);
 
     if (src.lang === 'ar') {
       // Translate first 10 headlines per source — stays well under the 5000
       // char/day MyMemory anon quota for Arabic-only sources
-      const toTr = items.slice(0, 10);
+      const toTr = items.slice(0, Math.min(10, cap));
       await Promise.all(
         toTr.map(async (it) => {
           const en = await translate(it.title, 'ar', 'en');
@@ -1130,8 +1145,24 @@ function renderStatusStrip() {
 let bannerIdx = 0;
 let bannerTimer = null;
 function renderBanner() {
-  const sec  = state.items.filter((i) => i.tags.includes('security')).slice(0, 8);
-  const pool = sec.length ? sec : state.items.slice(0, 8);
+  // Only surface items NEWER than 15 minutes. Falls back through wider
+  // windows so the banner never goes blank if it's been a quiet hour.
+  const now = Date.now();
+  const ts = (it) => (it.date instanceof Date ? it.date.getTime() : new Date(it.date).getTime());
+  const within = (mins) => state.items.filter((it) => now - ts(it) < mins * 60_000);
+
+  // Preference order: security-tagged in 15min → any in 15min →
+  // security-tagged in 60min → any in 60min → newest item available
+  let pool = within(15).filter((i) => i.tags?.includes('security')).slice(0, 8);
+  let label = 'BREAKING · 15m';
+  if (!pool.length) { pool = within(15).slice(0, 8); label = 'LATEST · 15m'; }
+  if (!pool.length) { pool = within(60).filter((i) => i.tags?.includes('security')).slice(0, 8); label = 'RECENT · 60m'; }
+  if (!pool.length) { pool = within(60).slice(0, 8); label = 'RECENT · 60m'; }
+  if (!pool.length) { pool = state.items.slice(0, 6); label = 'FEED · stale'; }
+
+  const tag = document.querySelector('.banner-tag');
+  if (tag) tag.textContent = label;
+
   if (!pool.length) {
     $('#breaking-text').textContent = 'Awaiting feed…';
     return;
@@ -1141,7 +1172,7 @@ function renderBanner() {
     const it = pool[bannerIdx % pool.length];
     $('#breaking-text').innerHTML =
       `<a href="${escapeHtml(it.link)}" target="_blank" rel="noopener">${escapeHtml(it.title)}</a>` +
-      `<span class="banner-src"> — ${escapeHtml(it.source)}</span>`;
+      `<span class="banner-src"> — ${escapeHtml(it.source)} · ${fmtAgo(it.date)} ago</span>`;
     bannerIdx++;
   };
   tick();
@@ -2589,7 +2620,21 @@ function renderSourcesView() {
     `;
   }).join('');
   const rows = builtin;
+  const itemsCap = getItemsPerSource();
   const html = `
+    <div class="src-controls">
+      <div class="src-ctrl-row">
+        <span class="src-ctrl-label">▮ NEXT SCRAPE</span>
+        <span id="src-countdown" class="src-countdown">—</span>
+        <button class="src-scrape" id="src-scrape-now">⟳ SCRAPE NOW</button>
+      </div>
+      <div class="src-ctrl-row">
+        <span class="src-ctrl-label">▮ ITEMS / SOURCE</span>
+        <input id="src-items-slider" type="range" min="5" max="100" step="5" value="${itemsCap}" />
+        <span id="src-items-value" class="src-items-value">${itemsCap}</span>
+      </div>
+    </div>
+
     <form class="add-source" id="add-source-form" autocomplete="off">
       <input type="text" name="name" placeholder="Name (optional)" />
       <input type="url"  name="url"  placeholder="RSS URL — or any site URL, we auto-detect" required />
@@ -2612,9 +2657,50 @@ function renderSourcesView() {
       <div class="src-row"><span class="sname">MyMemory (AR → EN translate)</span><span class="scount">${Object.keys(tCache).length} cached</span><span class="sstatus ok">OK</span></div>
     </div>
   `;
-  // Bind the add-source form on next paint (innerHTML replacement requires re-bind)
-  setTimeout(() => bindAddSourceForm(), 0);
+  setTimeout(() => {
+    bindAddSourceForm();
+    bindSourceControls();
+  }, 0);
   return html;
+}
+
+/** Wire up the SOURCES tab controls (countdown / scrape-now / items slider). */
+function bindSourceControls() {
+  const slider = document.getElementById('src-items-slider');
+  const val    = document.getElementById('src-items-value');
+  if (slider && val) {
+    slider.addEventListener('input', () => {
+      val.textContent = slider.value;
+    });
+    slider.addEventListener('change', () => {
+      const n = parseInt(slider.value, 10);
+      setItemsPerSource(n);
+      toast(`Items / source = ${n}. Triggering scrape…`);
+      refresh();
+    });
+  }
+  const btn = document.getElementById('src-scrape-now');
+  if (btn) {
+    btn.addEventListener('click', () => {
+      btn.disabled = true;
+      btn.textContent = '⟳ SCRAPING…';
+      refresh().finally(() => {
+        btn.disabled = false;
+        btn.textContent = '⟳ SCRAPE NOW';
+      });
+    });
+  }
+}
+
+/** Tick the SOURCES-tab countdown to match the global next-refresh time. */
+function updateSourceCountdown() {
+  const el = document.getElementById('src-countdown');
+  if (!el || !state.nextRefreshAt) return;
+  const ms = Math.max(0, state.nextRefreshAt - Date.now());
+  const mins = Math.floor(ms / 60000);
+  const secs = Math.floor((ms % 60000) / 1000);
+  el.textContent = `${mins}m ${String(secs).padStart(2,'0')}s`;
+  el.classList.toggle('imminent', ms < 30000);
 }
 
 /* ============================================================
@@ -2924,7 +3010,7 @@ function init() {
   $('#refresh').addEventListener('click', refresh);
 
   tickClock();
-  setInterval(() => { tickClock(); updateRefreshCountdown(); }, 1000);
+  setInterval(() => { tickClock(); updateRefreshCountdown(); updateSourceCountdown(); }, 1000);
 
   // re-render relative timestamps every 30s without re-fetching
   setInterval(() => {

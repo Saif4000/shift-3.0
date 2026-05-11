@@ -1296,6 +1296,61 @@ kbd {
   font-weight: 700;
 }
 
+/* ============= SOURCE CONTROLS (countdown / scrape now / slider) ============= */
+.src-controls {
+  padding: 10px 12px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 8px;
+}
+.src-ctrl-row {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+}
+.src-ctrl-label {
+  color: var(--amber);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  min-width: 130px;
+}
+.src-countdown {
+  color: var(--cyan);
+  font-weight: 700;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  min-width: 80px;
+  letter-spacing: 0.5px;
+}
+.src-countdown.imminent { color: var(--green); animation: pulse 1.2s ease-in-out infinite; }
+.src-scrape {
+  background: var(--amber);
+  color: #000;
+  border: none;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 6px 14px;
+  cursor: pointer;
+  margin-left: auto;
+}
+.src-scrape:hover { background: var(--green); }
+.src-scrape:disabled { opacity: 0.5; cursor: progress; }
+
+#src-items-slider {
+  flex: 1; min-width: 140px; max-width: 320px;
+  height: 4px;
+  accent-color: var(--amber);
+  cursor: pointer;
+}
+.src-items-value {
+  color: var(--white);
+  font-weight: 700;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  min-width: 30px;
+}
+
 /* ============= CUSTOM SOURCE FORM ============= */
 .add-source {
   padding: 12px;
