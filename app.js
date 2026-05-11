@@ -1328,24 +1328,28 @@ function initMapOnce() {
   renderAirportsAndBases();
 
   // ---- SITAWARE overlays ----
-  fetchAndRenderAirspace();    // FIR / CTA / restricted / danger zones
-  renderCables();              // submarine cables
-  fetchAndRenderSigmets();     // NOAA aviation weather hazards
-  fetchAndRenderQuakes();      // USGS earthquakes
+  fetchAndRenderAirspace();        // FIR · UIR · ADIZ · CTA · CTR · TMA · restricted · danger · prohibited
+  fetchAndRenderOpenAipAirports(); // OpenAIP military + IFR airports
+  fetchAndRenderNavaids();         // VOR / TACAN / VORTAC nav spine
+  renderCables();                  // submarine cables
+  fetchAndRenderSigmets();         // NOAA aviation weather hazards
+  fetchAndRenderQuakes();          // USGS earthquakes
 
   // ---- Layer control panel — toggle each overlay on/off ----
   setTimeout(() => {
     const overlays = {};
-    if (civilLayer)    overlays['◯ AIRPORTS · CIV']  = civilLayer;
-    if (milLayer)      overlays['◆ MIL BASES']        = milLayer;
-    if (airspaceLayer) overlays['◇ AIRSPACE / FIR']   = airspaceLayer;
-    if (cableLayer)    overlays['~ SUB CABLES']       = cableLayer;
-    if (sigmetLayer)   overlays['⛅ SIGMETs']          = sigmetLayer;
-    if (quakeLayer)    overlays['◉ EARTHQUAKES 24h']  = quakeLayer;
+    if (civilLayer)         overlays['◯ HOMEBASE AIRPORTS'] = civilLayer;
+    if (milLayer)           overlays['◆ HOMEBASE MIL BASES'] = milLayer;
+    if (openaipAirportLayer) overlays['▲ OPENAIP AIRPORTS']  = openaipAirportLayer;
+    if (navaidLayer)        overlays['⬡ NAVAIDS · VOR/TACAN'] = navaidLayer;
+    if (airspaceLayer)      overlays['◇ AIRSPACE · FIR/ADIZ/CTR']= airspaceLayer;
+    if (cableLayer)         overlays['~ SUB CABLES']          = cableLayer;
+    if (sigmetLayer)        overlays['⛅ SIGMETs']             = sigmetLayer;
+    if (quakeLayer)         overlays['◉ EARTHQUAKES 24h']     = quakeLayer;
     L.control.layers(null, overlays, {
       position: 'topleft', collapsed: true,
     }).addTo(leafletMap);
-  }, 2000);
+  }, 2500);
 
   // ---- Plane dead-reckoning tick — makes tracks move between fetches ----
   startPlaneTick();
@@ -1515,29 +1519,51 @@ function fmtAltLimit(lim) {
   return `${lim.value}${unit} ${ref}`;
 }
 
-/** OpenAIP airspace type codes (verified empirically against Gulf bbox):
- *   1 RESTRICTED/MTZ · 2 DANGER · 3 PROHIBITED · 4 CTR · 6 MBZ · 7 TMA ·
- *   10 FIR · 13 ATZ · 26 CTA · 28 SPEC USE · 29 WILDLIFE */
+/** OpenAIP airspace type codes — official v1.1 enum (per OpenAPI spec):
+ *   0 Other · 1 Restricted · 2 Danger · 3 Prohibited · 4 CTR · 5 TMZ ·
+ *   6 RMZ · 7 TMA · 8 TRA · 9 TSA · 10 FIR · 11 UIR · 12 ADIZ · 13 ATZ ·
+ *   14 MATZ · 15 Airway · 17 Alert · 18 Warning · 19 Protected Area ·
+ *   26 CTA · 27 ACC Sector · 34 LTA · 35 UTA · 36 MCTR */
 function airspaceStyle(t) {
   switch (Number(t)) {
-    case 10: return { color: '#5fc7ff', weight: 1.5, opacity: 0.6,  dashArray: '8 4', fillOpacity: 0.02, label: 'FIR' };
-    case 26: return { color: '#b794ff', weight: 1.2, opacity: 0.45, dashArray: '4 3', fillOpacity: 0.02, label: 'CTA' };
-    case 4:  return { color: '#ffaa00', weight: 1.2, opacity: 0.55, dashArray: '2 3', fillOpacity: 0.04, label: 'CTR' };
-    case 7:  return { color: '#ffaa00', weight: 1.0, opacity: 0.45, dashArray: '3 3', fillOpacity: 0.03, label: 'TMA' };
-    case 13: return { color: '#ffd866', weight: 0.9, opacity: 0.4,  dashArray: '2 4', fillOpacity: 0.02, label: 'ATZ' };
-    case 1:  return { color: '#ff3344', weight: 1.4, opacity: 0.6,  dashArray: '4 2', fillOpacity: 0.05, label: 'RESTR' };
-    case 2:  return { color: '#ff6ad5', weight: 1.4, opacity: 0.6,  dashArray: '5 3', fillOpacity: 0.05, label: 'DANGER' };
-    case 3:  return { color: '#ff3344', weight: 1.8, opacity: 0.7,  dashArray: '2 2', fillOpacity: 0.1,  label: 'PROHIB' };
-    case 6:  return { color: '#888',    weight: 0.7, opacity: 0.3,  dashArray: '1 3', fillOpacity: 0.01, label: 'MBZ' };
-    default: return { color: '#888',    weight: 0.7, opacity: 0.3,  dashArray: '2 4', fillOpacity: 0.02, label: 'AREA' };
+    case 12: return { color: '#ff6ad5', weight: 2.0, opacity: 0.85, dashArray: '10 4', fillOpacity: 0.05, label: 'ADIZ' };
+    case 10: return { color: '#5fc7ff', weight: 1.5, opacity: 0.6,  dashArray: '8 4',  fillOpacity: 0.02, label: 'FIR' };
+    case 11: return { color: '#5fc7ff', weight: 1.2, opacity: 0.45, dashArray: '8 6',  fillOpacity: 0.01, label: 'UIR' };
+    case 26: return { color: '#b794ff', weight: 1.2, opacity: 0.45, dashArray: '4 3',  fillOpacity: 0.02, label: 'CTA' };
+    case 34: return { color: '#b794ff', weight: 1.0, opacity: 0.4,  dashArray: '4 4',  fillOpacity: 0.01, label: 'LTA' };
+    case 35: return { color: '#b794ff', weight: 1.0, opacity: 0.4,  dashArray: '4 4',  fillOpacity: 0.01, label: 'UTA' };
+    case 4:  return { color: '#ffaa00', weight: 1.2, opacity: 0.55, dashArray: '2 3',  fillOpacity: 0.04, label: 'CTR' };
+    case 36: return { color: '#ffaa00', weight: 1.2, opacity: 0.55, dashArray: '2 3',  fillOpacity: 0.05, label: 'MCTR' };
+    case 7:  return { color: '#ffaa00', weight: 1.0, opacity: 0.45, dashArray: '3 3',  fillOpacity: 0.03, label: 'TMA' };
+    case 13: return { color: '#ffd866', weight: 0.9, opacity: 0.4,  dashArray: '2 4',  fillOpacity: 0.02, label: 'ATZ' };
+    case 14: return { color: '#ffd866', weight: 1.0, opacity: 0.45, dashArray: '2 4',  fillOpacity: 0.03, label: 'MATZ' };
+    case 5:  return { color: '#ffd866', weight: 0.9, opacity: 0.4,  dashArray: '2 3',  fillOpacity: 0.02, label: 'TMZ' };
+    case 6:  return { color: '#888',    weight: 0.7, opacity: 0.3,  dashArray: '1 3',  fillOpacity: 0.01, label: 'RMZ' };
+    case 1:  return { color: '#ff3344', weight: 1.4, opacity: 0.6,  dashArray: '4 2',  fillOpacity: 0.05, label: 'RESTR' };
+    case 2:  return { color: '#ff6ad5', weight: 1.4, opacity: 0.6,  dashArray: '5 3',  fillOpacity: 0.05, label: 'DANGER' };
+    case 3:  return { color: '#ff3344', weight: 1.8, opacity: 0.7,  dashArray: '2 2',  fillOpacity: 0.1,  label: 'PROHIB' };
+    case 8:  return { color: '#ff3344', weight: 1.2, opacity: 0.5,  dashArray: '6 3',  fillOpacity: 0.04, label: 'TRA' };
+    case 9:  return { color: '#ff3344', weight: 1.2, opacity: 0.5,  dashArray: '6 3',  fillOpacity: 0.04, label: 'TSA' };
+    case 17: return { color: '#ffaa00', weight: 1.2, opacity: 0.55, dashArray: '5 5',  fillOpacity: 0.04, label: 'ALERT' };
+    case 18: return { color: '#ff3344', weight: 1.4, opacity: 0.6,  dashArray: '6 2',  fillOpacity: 0.05, label: 'WARN' };
+    case 15: return { color: '#5fc7ff', weight: 0.8, opacity: 0.35, dashArray: '1 6',  fillOpacity: 0.0,  label: 'AWY' };
+    case 19: return { color: '#00e676', weight: 1.0, opacity: 0.5,  dashArray: '3 3',  fillOpacity: 0.03, label: 'PROT' };
+    default: return { color: '#888',    weight: 0.7, opacity: 0.3,  dashArray: '2 4',  fillOpacity: 0.02, label: 'AREA' };
   }
 }
 
 async function fetchAndRenderAirspace() {
   if (!leafletMap) return;
   try {
-    // FIR (10) + CTA (26) + CTR (4) + TMA (7) + RESTR (1) + DANGER (2) + PROHIB (3)
-    const r = await fetchTimeout('/api/airspace?bbox=40,12,70,42&types=10,26,4,7,1,2,3&limit=400', {}, 12000);
+    // pos+dist filter (OpenAIP has NO bbox param). Gulf center 27,55,
+    // 2400km radius covers the full MENA+Iran zone we care about.
+    // Types: 10 FIR · 11 UIR · 12 ADIZ · 26 CTA · 4 CTR · 36 MCTR ·
+    // 7 TMA · 14 MATZ · 1 RESTR · 2 DANGER · 3 PROHIB · 8 TRA · 9 TSA ·
+    // 17 ALERT · 18 WARN
+    const r = await fetchTimeout(
+      '/api/airspace?pos=27,55&dist=2400000&types=10,11,12,26,4,36,7,14,1,2,3,8,9,17,18&limit=1000',
+      {}, 15000,
+    );
     if (!r.ok) return;
     const j = await r.json();
     if (!j.ok || !Array.isArray(j.items)) return;
@@ -1593,6 +1619,96 @@ async function fetchAndRenderAirspace() {
     });
     airspaceLayer.addTo(leafletMap);
   } catch (e) { console.warn('[airspace]', e.message); }
+}
+
+/* ============================================================
+ * OPENAIP AIRPORTS — military (red triangle) + civil (cyan dot).
+ * Type codes: 3 International · 4 Heliport Mil · 5 Mil Aerodrome · 9 IFR.
+ * ============================================================ */
+let openaipAirportLayer = null;
+async function fetchAndRenderOpenAipAirports() {
+  if (!leafletMap) return;
+  try {
+    const r = await fetchTimeout('/api/airports?pos=27,55&dist=2400000&types=3,4,5,9&limit=1000', {}, 12000);
+    if (!r.ok) return;
+    const j = await r.json();
+    if (!j.ok || !Array.isArray(j.items)) return;
+    if (openaipAirportLayer) leafletMap.removeLayer(openaipAirportLayer);
+    openaipAirportLayer = L.layerGroup();
+
+    j.items.forEach((a) => {
+      const c = a.geometry?.coordinates;
+      if (!c || c.length < 2) return;
+      const [lon, lat] = c;
+      const isMil = a.type === 5 || a.type === 4;
+      const color = isMil ? '#ff3344' : '#5fc7ff';
+      const elev = a.elevation?.value != null ? `${a.elevation.value}${a.elevation.unit === 0 ? 'm' : 'ft'}` : '';
+      const icao = a.icaoCode || '';
+      const iata = a.iataCode || '';
+      const code = icao || iata || '';
+      const tooltipLines = [
+        `<b style="color:${color}">${escapeHtml(isMil ? 'MIL AIRPORT' : 'AIRPORT')}</b>${code ? ` · ${escapeHtml(code)}` : ''}${a.country ? ' · ' + escapeHtml(a.country) : ''}`,
+        `<span style="color:#fff">${escapeHtml(a.name || code || '?')}</span>`,
+        elev ? `ELEV ${escapeHtml(elev)}` : '',
+        a.runways?.length ? `${a.runways.length} runway${a.runways.length > 1 ? 's' : ''}` : '',
+      ].filter(Boolean).join('<br>');
+      // Triangle for military, circle for civil
+      const svg = isMil
+        ? `<svg width="13" height="13" viewBox="0 0 13 13"><path d="M6.5 1 L12 11 L1 11 Z" fill="rgba(255,51,68,0.25)" stroke="#ff3344" stroke-width="1.4"/><circle cx="6.5" cy="8" r="1" fill="#ff3344"/></svg>`
+        : `<svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="4.5" fill="rgba(95,199,255,0.18)" stroke="#5fc7ff" stroke-width="1.2"/><circle cx="6" cy="6" r="1" fill="#5fc7ff"/></svg>`;
+      L.marker([lat, lon], {
+        icon: L.divIcon({
+          className: isMil ? 'mil-airport' : 'civ-airport',
+          html: svg, iconSize: [13, 13], iconAnchor: [6.5, 6.5],
+        }),
+      }).bindTooltip(tooltipLines, { sticky: true }).addTo(openaipAirportLayer);
+    });
+    openaipAirportLayer.addTo(leafletMap);
+  } catch (e) { console.warn('[openaip-airports]', e.message); }
+}
+
+/* ============================================================
+ * OPENAIP NAVAIDS — VOR / DME / TACAN / VORTAC hexagons. The nav spine.
+ * Type codes: 1 TACAN · 3 VOR · 4 VOR-DME · 5 VORTAC.
+ * ============================================================ */
+let navaidLayer = null;
+async function fetchAndRenderNavaids() {
+  if (!leafletMap) return;
+  try {
+    const r = await fetchTimeout('/api/navaids?pos=27,55&dist=2400000&types=1,3,4,5&limit=1000', {}, 12000);
+    if (!r.ok) return;
+    const j = await r.json();
+    if (!j.ok || !Array.isArray(j.items)) return;
+    if (navaidLayer) leafletMap.removeLayer(navaidLayer);
+    navaidLayer = L.layerGroup();
+
+    const typeLabel = { 1: 'TACAN', 3: 'VOR', 4: 'VOR-DME', 5: 'VORTAC' };
+
+    j.items.forEach((n) => {
+      const c = n.geometry?.coordinates;
+      if (!c || c.length < 2) return;
+      const [lon, lat] = c;
+      const isMil = n.type === 1 || n.type === 5; // TACAN / VORTAC = military
+      const color = isMil ? '#ff6ad5' : '#5fc7ff';
+      const tip =
+        `<b style="color:${color}">${typeLabel[n.type] || 'NAV'}</b>${n.identifier ? ` · ${escapeHtml(n.identifier)}` : ''}` +
+        `<br><span style="color:#fff">${escapeHtml(n.name || '?')}</span>` +
+        (n.frequency?.value != null ? `<br>${n.frequency.value} ${n.frequency.unit === 0 ? 'kHz' : 'MHz'}` : '') +
+        (n.channel ? ` · CH ${escapeHtml(n.channel)}` : '');
+      const svg =
+        `<svg width="11" height="11" viewBox="0 0 11 11">` +
+        `<path d="M5.5 0.5 L10.5 3.25 L10.5 7.75 L5.5 10.5 L0.5 7.75 L0.5 3.25 Z" ` +
+        `fill="${isMil ? 'rgba(255,106,213,0.25)' : 'none'}" stroke="${color}" stroke-width="1.1"/>` +
+        `<circle cx="5.5" cy="5.5" r="1" fill="${color}"/>` +
+        `</svg>`;
+      L.marker([lat, lon], {
+        icon: L.divIcon({
+          className: 'navaid', html: svg, iconSize: [11, 11], iconAnchor: [5.5, 5.5],
+        }),
+      }).bindTooltip(tip, { sticky: true }).addTo(navaidLayer);
+    });
+    navaidLayer.addTo(leafletMap);
+  } catch (e) { console.warn('[navaids]', e.message); }
 }
 
 /* ============================================================

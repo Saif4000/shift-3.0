@@ -1061,8 +1061,13 @@ body.fetching .dataflow {
   .map-hud { font-size: 9px; padding: 4px 6px; }
 }
 
-.airport-civil, .mil-base, .mil-symbol { background: none !important; border: none !important; }
-.airport-civil svg, .mil-base svg, .mil-symbol svg { filter: drop-shadow(0 0 2px rgba(0,0,0,0.85)); }
+.airport-civil, .mil-base, .mil-symbol, .mil-airport, .civ-airport, .navaid {
+  background: none !important; border: none !important;
+}
+.airport-civil svg, .mil-base svg, .mil-symbol svg,
+.mil-airport svg, .civ-airport svg, .navaid svg {
+  filter: drop-shadow(0 0 2px rgba(0,0,0,0.85));
+}
 #next-update { color: var(--cyan); font-weight: 600; }
 
 /* Leaflet layer-control — terminal styling */
