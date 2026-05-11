@@ -34,17 +34,41 @@ async function tryExchangeHost() {
   } catch { return null; }
 }
 
+/* GCC pegged currencies — Frankfurter / ECB ref only carries floating
+ * currencies, but Gulf state pegs are de-facto fixed by central banks. */
+const GULF_PEGS = {
+  AED: 3.6725, // CBUAE peg 1997
+  SAR: 3.7500, // SAMA peg 1986
+  QAR: 3.6400, // QCB peg
+  OMR: 0.3845, // CBO peg
+  BHD: 0.3760, // CBB peg
+};
+
 export default async function handler() {
   let rates = await tryFrankfurterV1();
   if (!rates) rates = await tryFrankfurter('api.frankfurter.app');
   if (!rates) rates = await tryExchangeHost();
-  if (!rates) {
+  if (!rates) rates = {};
+
+  // Merge in GCC pegs — only fill values not already in the upstream rates
+  const merged = { ...rates };
+  for (const [k, v] of Object.entries(GULF_PEGS)) {
+    if (merged[k] == null) merged[k] = v;
+  }
+
+  if (Object.keys(merged).length === 0) {
     return new Response(JSON.stringify({ ok: false, error: 'all FX upstreams failed' }), {
       status: 502,
       headers: { 'content-type': 'application/json' },
     });
   }
-  return new Response(JSON.stringify({ ok: true, base: 'USD', rates, at: Date.now() }), {
+  return new Response(JSON.stringify({
+    ok: true,
+    base: 'USD',
+    rates: merged,
+    pegs: Object.keys(GULF_PEGS),
+    at: Date.now(),
+  }), {
     status: 200,
     headers: {
       'content-type': 'application/json; charset=utf-8',
