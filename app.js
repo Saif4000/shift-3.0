@@ -936,17 +936,21 @@ function fillLane(elId, parts, fallback) {
   const segment = parts.join('<span class="sep">·</span>') + '<span class="sep">·</span>';
   // Pass 1 — measure a single segment's natural width
   el.innerHTML = segment;
-  // Read scrollWidth (forces a synchronous layout pass)
   const oneWidth = el.scrollWidth || 200;
   const lane = el.parentElement;
-  const viewWidth = ((lane && lane.clientWidth) || window.innerWidth || 1200) - 50; // minus label
-  // Want total content ≥ ~2.2× viewport so the loop is seamless even if
-  // the lane is on a wide desktop monitor.
-  const copies = Math.max(2, Math.ceil((viewWidth * 2.2) / oneWidth));
+  const viewWidth = ((lane && lane.clientWidth) || window.innerWidth || 1200) - 50;
+
+  // Want total content ≥ 4× viewport so the marquee loop has zero visible gap
+  // even on ultrawide screens. ALSO force an even copy count — the CSS
+  // animation translates by -50%, so an odd count lands mid-segment and looks
+  // like a 'shift' at the loop point.
+  let copies = Math.max(4, Math.ceil((viewWidth * 4) / oneWidth));
+  if (copies % 2 !== 0) copies += 1;
   el.innerHTML = segment.repeat(copies);
-  // Keep scroll speed roughly constant — ~55 px/sec across all configurations
-  const totalScrollPx = (copies * oneWidth) * 0.5; // matches CSS translateX(-50%)
-  const dur = Math.max(20, Math.round(totalScrollPx / 55));
+
+  // Animation duration so perceived scroll stays ~50 px/sec regardless of N
+  const totalScrollPx = (copies * oneWidth) * 0.5;
+  const dur = Math.max(30, Math.round(totalScrollPx / 50));
   el.style.animationDuration = `${dur}s`;
 }
 
