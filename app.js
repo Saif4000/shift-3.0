@@ -354,9 +354,7 @@ const LIVE_CHANNELS = [
   { channelId: 'UCknLrEdhRCp1aegoMqRaCZg', name: 'DW NEWS',          desk: 'BERLIN · DE' },
   { channelId: 'UC7fWeaHhqgM4Ry-RMpM2YYw', name: 'TRT WORLD',        desk: 'ISTANBUL · TR' },
   { channelId: 'UCeY0bbntWzzVIaj2z3QigXg', name: 'NBC NEWS NOW',     desk: 'NEW YORK · US' },
-  { channelId: 'UCUMZ7gohGI9HcU9VNsr2FJQ', name: 'BLOOMBERG QT',     desk: 'NEW YORK · US' },
-  { channelId: 'UCwqusr-yDKpDy5XdiL9j4hg', name: 'SKY NEWS AU',      desk: 'SYDNEY · AU' },
-  { channelId: 'UCLA_DiR1FfKNvjuUpBHmylQ', name: 'NASA TV',          desk: 'WASHINGTON · US' },
+  { channelId: 'UCSJ4gkVC6NrvII8umztf0Ow', name: 'LOFI GIRL',        desk: 'PARIS · FR · CHILL' },
 ];
 
 const LIVE_AUTO_LOAD = 4;
