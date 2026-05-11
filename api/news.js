@@ -44,6 +44,14 @@ function headersFor(parsedUrl) {
   if (host.endsWith('rsshub.app') || host.endsWith('rsshub.pseudoyu.com')) {
     return { 'User-Agent': 'shift-2.0/2.0 (+https://shift-2-0.vercel.app)' };
   }
+  // Roll Call Factbase is paywalled — pass through the subscriber's cookie
+  // if ROLLCALL_COOKIE env var is set so the upstream sees an auth'd session.
+  if (host.endsWith('rollcall.com') || host.endsWith('factba.se')) {
+    const cookie = (typeof process !== 'undefined' && process.env?.ROLLCALL_COOKIE) || '';
+    if (cookie) {
+      return { ...BROWSER_HEADERS, Cookie: cookie };
+    }
+  }
   return BROWSER_HEADERS;
 }
 
