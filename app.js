@@ -60,19 +60,52 @@ function cacheSet(key, value) {
  * Arabic GCC sources are headline-translated to English.
  * ============================================================ */
 const SOURCES = [
-  { id: 'aje',  name: 'Al Jazeera EN',     url: 'https://www.aljazeera.com/xml/rss/all.xml',                region: 'QA',  lang: 'en' },
-  { id: 'toi',  name: 'Times of Israel',   url: 'https://www.timesofisrael.com/feed/',                      region: 'IL',  lang: 'en' },
-  { id: 'jp',   name: 'Jerusalem Post',    url: 'https://www.jpost.com/rss/rssfeedsfrontpage.aspx',         region: 'IL',  lang: 'en' },
-  { id: 'tn',   name: 'The National (UAE)',url: 'https://www.thenationalnews.com/rss/uae',                  region: 'AE',  lang: 'en' },
-  { id: 'tnmena', name: 'The National MENA', url: 'https://www.thenationalnews.com/rss/mena',               region: 'AE',  lang: 'en' },
-  { id: 'an',   name: 'Arab News',         url: 'https://www.arabnews.com/rss.xml',                         region: 'SA',  lang: 'en' },
-  { id: 'kt',   name: 'Khaleej Times',     url: 'https://www.khaleejtimes.com/rss',                         region: 'AE',  lang: 'en' },
-  { id: 'mee',  name: 'Middle East Eye',   url: 'https://www.middleeasteye.net/rss',                        region: 'REG', lang: 'en' },
-  { id: 'rt-me', name: 'Reuters MENA',     url: 'https://news.google.com/rss/search?q=site:reuters.com+(Israel+OR+Iran+OR+Gulf+OR+Saudi+OR+UAE+OR+Gaza)+when:1d&hl=en-US&gl=US&ceid=US:en', region: 'WIRE', lang: 'en' },
-  { id: 'bbc-me', name: 'BBC Middle East', url: 'https://feeds.bbci.co.uk/news/world/middle_east/rss.xml',  region: 'REG', lang: 'en' },
-  // Arabic GCC source — auto-translated headlines (MyMemory free tier)
-  { id: 'alar', name: 'Al Arabiya (AR)',   url: 'https://www.alarabiya.net/.mrss/ar.xml',                   region: 'SA',  lang: 'ar' },
+  // ---- Regional MENA / GCC ----
+  { id: 'aje',     name: 'Al Jazeera EN',     url: 'https://www.aljazeera.com/xml/rss/all.xml',                region: 'QA',   lang: 'en' },
+  { id: 'toi',     name: 'Times of Israel',   url: 'https://www.timesofisrael.com/feed/',                      region: 'IL',   lang: 'en' },
+  { id: 'jp',      name: 'Jerusalem Post',    url: 'https://www.jpost.com/rss/rssfeedsfrontpage.aspx',         region: 'IL',   lang: 'en' },
+  { id: 'tn',      name: 'The National UAE',  url: 'https://www.thenationalnews.com/rss/uae',                  region: 'AE',   lang: 'en' },
+  { id: 'tnmena',  name: 'The National MENA', url: 'https://www.thenationalnews.com/rss/mena',                 region: 'AE',   lang: 'en' },
+  { id: 'an',      name: 'Arab News',         url: 'https://www.arabnews.com/rss.xml',                         region: 'SA',   lang: 'en' },
+  { id: 'kt',      name: 'Khaleej Times',     url: 'https://www.khaleejtimes.com/rss',                         region: 'AE',   lang: 'en' },
+  { id: 'mee',     name: 'Middle East Eye',   url: 'https://www.middleeasteye.net/rss',                        region: 'REG',  lang: 'en' },
+  { id: 'rt-me',   name: 'Reuters MENA',      url: 'https://news.google.com/rss/search?q=site:reuters.com+(Israel+OR+Iran+OR+Gulf+OR+Saudi+OR+UAE+OR+Gaza)+when:1d&hl=en-US&gl=US&ceid=US:en', region: 'WIRE', lang: 'en' },
+  { id: 'bbc-me',  name: 'BBC Middle East',   url: 'https://feeds.bbci.co.uk/news/world/middle_east/rss.xml',  region: 'REG',  lang: 'en' },
+  { id: 'alar',    name: 'Al Arabiya (AR)',   url: 'https://www.alarabiya.net/.mrss/ar.xml',                   region: 'SA',   lang: 'ar' },
+
+  // ---- US wires / American press ----
+  { id: 'nyt-world', name: 'NYT World',       url: 'https://rss.nytimes.com/services/xml/rss/nyt/World.xml',   region: 'US',   lang: 'en' },
+  { id: 'nyt-bus',   name: 'NYT Business',    url: 'https://rss.nytimes.com/services/xml/rss/nyt/Business.xml',region: 'US',   lang: 'en' },
+  { id: 'wsj-mkt',   name: 'WSJ Markets',     url: 'https://feeds.a.dj.com/rss/RSSMarketsMain.xml',            region: 'US',   lang: 'en' },
+  { id: 'wsj-world', name: 'WSJ World',       url: 'https://feeds.a.dj.com/rss/RSSWorldNews.xml',              region: 'US',   lang: 'en' },
+  { id: 'cnn-top',   name: 'CNN Top',         url: 'http://rss.cnn.com/rss/cnn_topstories.rss',                region: 'US',   lang: 'en' },
+  { id: 'cnn-world', name: 'CNN World',       url: 'http://rss.cnn.com/rss/cnn_world.rss',                     region: 'US',   lang: 'en' },
+  { id: 'bbg',       name: 'Bloomberg',       url: 'https://news.google.com/rss/search?q=site:bloomberg.com&when:1d&hl=en-US&gl=US&ceid=US:en', region: 'US', lang: 'en' },
+  { id: 'reuters-us',name: 'Reuters US',      url: 'https://news.google.com/rss/search?q=site:reuters.com+(US+OR+Fed+OR+%22White+House%22+OR+Congress)&when:1d&hl=en-US&gl=US&ceid=US:en', region: 'US', lang: 'en' },
+  { id: 'ap',        name: 'AP News',         url: 'https://news.google.com/rss/search?q=site:apnews.com&when:1d&hl=en-US&gl=US&ceid=US:en', region: 'US', lang: 'en' },
+  { id: 'sp500',     name: 'S&P 500 / Fed',   url: 'https://news.google.com/rss/search?q=%22S%26P+500%22+OR+%22Federal+Reserve%22+OR+%22Treasury+yield%22&when:1d&hl=en-US&gl=US&ceid=US:en', region: 'MKT',  lang: 'en' },
+
+  // ---- Multilateral / Global health ----
+  { id: 'who',       name: 'WHO',             url: 'https://www.who.int/rss-feeds/news-english.xml',            region: 'UN',   lang: 'en' },
+  { id: 'un',        name: 'UN News',         url: 'https://news.un.org/feed/subscribe/en/news/all/rss.xml',    region: 'UN',   lang: 'en' },
+
+  // ---- AI / tech ----
+  { id: 'tc-ai',     name: 'TechCrunch AI',   url: 'https://techcrunch.com/category/artificial-intelligence/feed/', region: 'TECH', lang: 'en' },
+  { id: 'verge-ai',  name: 'The Verge AI',    url: 'https://www.theverge.com/rss/ai-artificial-intelligence/index.xml', region: 'TECH', lang: 'en' },
+  { id: 'mit-tr',    name: 'MIT Tech Review', url: 'https://www.technologyreview.com/feed/',                    region: 'TECH', lang: 'en' },
+  { id: 'ai-news',   name: 'AI News',         url: 'https://news.google.com/rss/search?q=%22OpenAI%22+OR+%22Anthropic%22+OR+%22DeepMind%22+OR+(AI+model)&when:1d&hl=en-US&gl=US&ceid=US:en', region: 'TECH', lang: 'en' },
 ];
+
+/* User-added sources (persisted in localStorage). Combined with SOURCES at fetch time. */
+let CUSTOM_SOURCES = [];
+function loadCustomSources() {
+  try { CUSTOM_SOURCES = JSON.parse(localStorage.getItem('shift:custom:sources') || '[]'); } catch { CUSTOM_SOURCES = []; }
+}
+function saveCustomSources() {
+  try { localStorage.setItem('shift:custom:sources', JSON.stringify(CUSTOM_SOURCES)); } catch {}
+}
+function getAllSources() { return [...SOURCES, ...CUSTOM_SOURCES]; }
+loadCustomSources();
 
 /* ============================================================
  * MARKET TICKERS
@@ -106,13 +139,14 @@ const NOTAM_AIRPORTS = ['KJFK','KLAX','KIAD','KORD','KMIA','KATL','KDFW','KBOS',
 
 /* Map presets — center, zoom, OpenSky bounding box */
 const MAP_PRESETS = {
-  mena:   { center: [27.0,   42.0],  zoom: 4, bbox: { lamin: 10, lamax: 45, lomin: 20, lomax: 70 } },
+  uae:    { center: [24.5,   54.4],  zoom: 7, bbox: { lamin: 22, lamax: 27, lomin: 51, lomax: 57 } },
   hormuz: { center: [26.566, 56.25], zoom: 7, bbox: { lamin: 22, lamax: 30, lomin: 50, lomax: 62 } },
+  mena:   { center: [27.0,   42.0],  zoom: 4, bbox: { lamin: 10, lamax: 45, lomin: 20, lomax: 70 } },
   redsea: { center: [20.0,   38.0],  zoom: 5, bbox: { lamin: 10, lamax: 30, lomin: 30, lomax: 46 } },
   med:    { center: [37.0,   18.0],  zoom: 5, bbox: { lamin: 30, lamax: 45, lomin: -5, lomax: 36 } },
   global: { center: [25.0,   30.0],  zoom: 3, bbox: { lamin: -10, lamax: 60, lomin: -20, lomax: 90 } },
 };
-let activePreset = 'mena';
+let activePreset = 'uae';
 
 /* Maritime chokepoints — mil-style markers w/ range rings (nautical miles) */
 const CHOKEPOINTS = [
@@ -226,7 +260,9 @@ function toast(msg) {
 const KW = {
   security: /\b(missile|strike|airstrike|attack|drone|UAV|IDF|IRGC|Houth(i|is)|Hezbollah|Hamas|terror(ist)?|war|combat|raid|killed|casualt|hostage|militant|rocket|cross[- ]?border|cease[- ]?fire|truce|gun(fire|men)?|assault|insurg|jihad|ISIS|al[- ]?Qaeda|kidnap|nuclear|enrich|warhead|battalion|brigade|skirmish|ambush|sabotag|cyber[- ]?attack|spyware)/i,
   politics: /\b(minister|president|parliament|election|summit|talks|negotiat|diplomat|embassy|sanction|treaty|accord|agreement|coalition|cabinet|envoy|relations|alliance|visit|condemn|statement|policy|government|knesset|majlis|premier|chancellor|ambassador|resolution|veto|UN|Security Council|G7|G20|OPEC\+?)/i,
-  economy:  /\b(oil|gas|OPEC|GDP|inflation|budget|bank|stock|market|exchange|trade|tariff|IMF|currency|fund|invest|deal|merger|acquisition|earnings|revenue|profit|loss|barrel|crude|brent|WTI|gold|dirham|riyal|shekel|aramco|adnoc|tadawul|DFM|TASI|TA[- ]?35|interest rate|hike|cut|bond|yield|recession|growth|export|import|IPO|sovereign wealth|PIF|mubadala|ADQ)/i,
+  economy:  /\b(oil|gas|OPEC|GDP|inflation|budget|bank|stock|market|exchange|trade|tariff|IMF|currency|fund|invest|deal|merger|acquisition|earnings|revenue|profit|loss|barrel|crude|brent|WTI|gold|dirham|riyal|shekel|aramco|adnoc|tadawul|DFM|TASI|TA[- ]?35|interest rate|hike|cut|bond|yield|recession|growth|export|import|IPO|sovereign wealth|PIF|mubadala|ADQ|Fed|Treasury|S&P|Dow|Nasdaq)/i,
+  ai:       /\b(artificial intelligence|machine learning|\bAI\b|\bLLM\b|\bGPT-?\d?|ChatGPT|Claude|OpenAI|Anthropic|DeepMind|Gemini|Llama|Mistral|neural network|generative AI|foundation model|RLHF|fine[- ]?tun|inference|copilot|stable diffusion|midjourney|nvidia|H100|H200|B200|tensor|datacenter|chatbot|prompt|hallucinat|AGI|deepfake|frontier model)/,
+  health:   /\b(WHO|outbreak|epidemic|pandemic|vaccin|disease|virus|cholera|measles|ebola|polio|HIV|malaria|TB|tuberculosis|cancer|maternal|public health|UNICEF|FDA|CDC)/i,
 };
 
 function classify(title, summary = '') {
@@ -235,6 +271,8 @@ function classify(title, summary = '') {
   if (KW.security.test(text)) tags.push('security');
   if (KW.politics.test(text)) tags.push('politics');
   if (KW.economy.test(text))  tags.push('economy');
+  if (KW.ai.test(text))       tags.push('ai');
+  if (KW.health.test(text))   tags.push('health');
   if (tags.length === 0)      tags.push('politics');
   return tags;
 }
@@ -389,7 +427,7 @@ function mergeAndDedupe(items) {
  */
 async function fetchAllNews() {
   const buf = [];
-  const tasks = SOURCES.map((src) =>
+  const tasks = getAllSources().map((src) =>
     fetchSource(src).then((items) => {
       if (!items.length) return;
       buf.push(...items);
@@ -1156,8 +1194,8 @@ function moveFocus(delta) {
 /* ============================================================
  * KEYBOARD SHORTCUTS
  * ============================================================ */
-const TAB_ORDER = ['all','security','politics','economy','markets','map','live','tensions','sources'];
-const TAB_LETTERS = { a: 'all', s: 'security', p: 'politics', e: 'economy', m: 'markets', v: 'map', l: 'live', t: 'tensions' };
+const TAB_ORDER = ['all','security','politics','economy','ai','markets','map','live','tensions','sources'];
+const TAB_LETTERS = { a: 'all', s: 'security', p: 'politics', e: 'economy', i: 'ai', m: 'markets', v: 'map', l: 'live', t: 'tensions' };
 
 function bindKeyboard() {
   document.addEventListener('keydown', (ev) => {
@@ -1419,8 +1457,85 @@ function renderTensionsView() {
   return head + body;
 }
 
+/* ============================================================
+ * CUSTOM SOURCE MANAGEMENT — add any RSS URL; auto-detect feed link
+ * inside HTML pages if the URL isn't itself RSS.
+ * ============================================================ */
+async function tryAddCustomSource(name, rawUrl, region) {
+  rawUrl = (rawUrl || '').trim();
+  if (!rawUrl) { toast('URL required'); return; }
+  if (!/^https?:\/\//i.test(rawUrl)) rawUrl = 'https://' + rawUrl;
+  const id = 'usr-' + Date.now();
+  const reg = (region || 'USER').slice(0, 4).toUpperCase();
+  const displayName = name && name.trim() ? name.trim() : new URL(rawUrl).hostname.replace(/^www\./, '');
+  const candidate = { id, name: displayName, url: rawUrl, region: reg, lang: 'en', custom: true };
+
+  toast(`Probing ${displayName}…`);
+  try {
+    const r = await proxyFetch(rawUrl);
+    const text = await r.text();
+    let items = parseRSS(text, candidate);
+
+    if (!items.length) {
+      // Try auto-detecting an RSS link in the HTML
+      const re = /<link[^>]+(?:rel=["']alternate["'][^>]+)?type=["']application\/(?:rss|atom)\+xml["'][^>]+href=["']([^"']+)["']/i;
+      const m = text.match(re) || text.match(/<link[^>]+href=["']([^"']+)["'][^>]+type=["']application\/(?:rss|atom)\+xml["']/i);
+      if (m) {
+        let rssUrl = m[1];
+        if (rssUrl.startsWith('//')) rssUrl = 'https:' + rssUrl;
+        else if (rssUrl.startsWith('/')) rssUrl = new URL(rawUrl).origin + rssUrl;
+        else if (!/^https?:/i.test(rssUrl)) rssUrl = new URL(rssUrl, rawUrl).href;
+        candidate.url = rssUrl;
+        const r2 = await proxyFetch(rssUrl);
+        items = parseRSS(await r2.text(), candidate);
+      }
+    }
+
+    if (!items.length) { toast(`No RSS at ${displayName}`); return; }
+
+    CUSTOM_SOURCES.push(candidate);
+    saveCustomSources();
+    state.sourceStatus[id] = { status: 'ok', count: items.length, name: candidate.name };
+    state.items = mergeAndDedupe([...items, ...state.items]);
+    cacheSet('news', state.items.slice(0, 200));
+    renderContent(); renderBanner(); renderSourcesView();
+    toast(`+ ${items.length} items from ${displayName}`);
+  } catch (e) {
+    toast(`Fetch failed: ${e.message}`);
+  }
+}
+
+function removeCustomSource(id) {
+  CUSTOM_SOURCES = CUSTOM_SOURCES.filter((s) => s.id !== id);
+  saveCustomSources();
+  delete state.sourceStatus[id];
+  renderSourcesView();
+  toast('Source removed');
+}
+
+function bindAddSourceForm() {
+  const form = document.getElementById('add-source-form');
+  if (!form || form.dataset.bound) return;
+  form.dataset.bound = '1';
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = form.querySelector('input[name=name]').value;
+    const url  = form.querySelector('input[name=url]').value;
+    const reg  = form.querySelector('input[name=region]')?.value || '';
+    tryAddCustomSource(name, url, reg);
+    form.querySelector('input[name=name]').value = '';
+    form.querySelector('input[name=url]').value = '';
+    if (form.querySelector('input[name=region]')) form.querySelector('input[name=region]').value = '';
+  });
+  form.addEventListener('click', (e) => {
+    const rm = e.target.closest('.sremove');
+    if (!rm) return;
+    removeCustomSource(rm.dataset.id);
+  });
+}
+
 function renderSourcesView() {
-  const rows = SOURCES.map((s) => {
+  const builtin = SOURCES.map((s) => {
     const st = state.sourceStatus[s.id] || { status: 'wait', count: 0 };
     return `
       <div class="src-row">
@@ -1430,8 +1545,28 @@ function renderSourcesView() {
       </div>
     `;
   }).join('');
-  return `
-    <div class="section-head">NEWS SOURCES <span class="sub">credible regional outlets</span></div>
+  const custom = CUSTOM_SOURCES.map((s) => {
+    const st = state.sourceStatus[s.id] || { status: 'wait', count: 0 };
+    return `
+      <div class="src-row">
+        <span class="sname">${escapeHtml(s.name)} <span style="color:var(--dim2);font-size:10px">${escapeHtml(s.region)} · custom</span></span>
+        <span class="scount">${st.count} items</span>
+        <span class="sstatus ${st.status}">${st.status.toUpperCase()}</span>
+        <button class="sremove" data-id="${escapeHtml(s.id)}" style="margin-left:6px">REMOVE</button>
+      </div>
+    `;
+  }).join('');
+  const rows = builtin;
+  const html = `
+    <form class="add-source" id="add-source-form" autocomplete="off">
+      <input type="text" name="name" placeholder="Name (optional)" />
+      <input type="url"  name="url"  placeholder="RSS URL — or any site URL, we auto-detect" required />
+      <button type="submit">+ ADD &amp; SCRAPE</button>
+      <div class="add-hint">▸ Try a regional blog, a Substack RSS, or a news site. We probe the URL, fall back to discovering &lt;link rel="alternate" type="application/rss+xml"&gt; if it's not RSS itself, fetch immediately, and store the source in localStorage.</div>
+    </form>
+    <div class="section-head">YOUR SOURCES <span class="sub">${CUSTOM_SOURCES.length} custom</span></div>
+    <div class="src-grid" id="user-sources">${custom || '<div class="empty">No custom sources yet — add one above.</div>'}</div>
+    <div class="section-head">BUILT-IN SOURCES <span class="sub">credible regional outlets</span></div>
     <div class="src-grid">${rows}</div>
     <div class="section-head">DATA ENDPOINTS</div>
     <div class="src-grid">
@@ -1439,19 +1574,23 @@ function renderSourcesView() {
       <div class="src-row"><span class="sname">Frankfurter (FX vs USD)</span><span class="scount">${Object.keys(state.fx).length} pairs</span><span class="sstatus ${Object.keys(state.fx).length ? 'ok' : 'err'}">${Object.keys(state.fx).length ? 'OK' : 'ERR'}</span></div>
       <div class="src-row"><span class="sname">CoinGecko (crypto)</span><span class="scount">${Object.keys(state.crypto).length} assets</span><span class="sstatus ${Object.keys(state.crypto).length ? 'ok' : 'err'}">${Object.keys(state.crypto).length ? 'OK' : 'ERR'}</span></div>
       <div class="src-row"><span class="sname">GDELT 2.0 (tension monitor)</span><span class="scount">${state.tensions.length} articles</span><span class="sstatus ${state.tensions.length ? 'ok' : 'wait'}">${state.tensions.length ? 'OK' : 'WAIT'}</span></div>
-      <div class="src-row"><span class="sname">OpenSky (live aircraft · MENA box)</span><span class="scount">${state.aircraft.length} states</span><span class="sstatus ${state.aircraft.length ? 'ok' : 'wait'}">${state.aircraft.length ? 'OK' : 'WAIT'}</span></div>
+      <div class="src-row"><span class="sname">OpenSky (live aircraft · ${activePreset.toUpperCase()} box)</span><span class="scount">${state.aircraft.length} states</span><span class="sstatus ${state.aircraft.length ? 'ok' : 'wait'}">${state.aircraft.length ? 'OK' : 'WAIT'}</span></div>
       <div class="src-row"><span class="sname">AviationAPI (FAA NOTAMs · US gateways)</span><span class="scount">${state.notams.length} active</span><span class="sstatus ${state.notams.length ? 'ok' : 'wait'}">${state.notams.length ? 'OK' : 'WAIT'}</span></div>
       <div class="src-row"><span class="sname">MyMemory (AR → EN translate)</span><span class="scount">${Object.keys(tCache).length} cached</span><span class="sstatus ok">OK</span></div>
     </div>
   `;
+  // Bind the add-source form on next paint (innerHTML replacement requires re-bind)
+  setTimeout(() => bindAddSourceForm(), 0);
+  return html;
 }
 
 /* ============================================================
  * DRIVER
  * ============================================================ */
 function updateFooter() {
+  const total = getAllSources().length;
   const okSources = Object.values(state.sourceStatus).filter((s) => s.status === 'ok').length;
-  $('#source-count').textContent = `${okSources}/${SOURCES.length} feeds`;
+  $('#source-count').textContent = `${okSources}/${total} feeds`;
   $('#last-update').textContent = state.lastUpdate
     ? 'updated ' + fmtTimeUTC(state.lastUpdate)
     : 'never';

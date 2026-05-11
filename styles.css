@@ -1,24 +1,30 @@
 /* SHIFT 2.0 — Bloomberg-terminal-inspired mobile-first stylesheet */
 
 :root {
-  --bg:         #000;
-  --bg2:        #080808;
-  --bg3:        #101010;
-  --bg4:        #161616;
-  --border:     #1c1c1c;
-  --border2:    #2a2a2a;
+  --bg:         #050505;
+  --bg2:        #111;
+  --bg3:        #181818;
+  --bg4:        #1f1f1f;
+  --hover:      #1f1f1f;
+  --hover2:     #262626;
+  --border:     #2a2a2a;
+  --border2:    #3a3a3a;
   --amber:      #ffaa00;
   --amber-dim:  #b07600;
   --amber-soft: #6a4800;
   --green:      #00e676;
   --red:        #ff3344;
   --white:      #fff;
-  --dim:        #888;
-  --dim2:       #555;
+  --dim:        #aaa;
+  --dim2:       #777;
   --cyan:       #5fc7ff;
   --magenta:    #ff6ad5;
+  --violet:     #b794ff;
   --mono: 'JetBrains Mono','IBM Plex Mono','Menlo','Consolas','Courier New',monospace;
 }
+
+/* universal [hidden] enforcement — must beat author display: rules */
+[hidden] { display: none !important; }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -211,9 +217,15 @@ button { font-family: inherit; }
 .item {
   padding: 10px 12px;
   border-bottom: 1px solid var(--border);
-  transition: background .12s;
+  transition: background .12s, border-color .12s;
+  cursor: pointer;
+  border-left: 2px solid transparent;
 }
-.item:hover { background: var(--bg2); }
+.item:hover {
+  background: var(--hover);
+  border-left-color: var(--amber-dim);
+}
+.item:hover .title { color: var(--amber); }
 
 .meta-row {
   display: flex; align-items: center; gap: 8px;
@@ -264,6 +276,8 @@ button { font-family: inherit; }
 .tag-politics { color: var(--amber); }
 .tag-economy  { color: var(--green); }
 .tag-tension  { color: var(--magenta); }
+.tag-ai       { color: var(--violet); }
+.tag-health   { color: var(--cyan); }
 
 /* ============= SECTION HEAD ============= */
 .section-head {
@@ -292,7 +306,9 @@ button { font-family: inherit; }
   padding: 10px 12px;
   display: flex; flex-direction: column; gap: 2px;
   min-height: 70px;
+  transition: background .12s;
 }
+.mcard:hover { background: var(--hover); }
 .mcard .ml { color: var(--dim); font-size: 10px; letter-spacing: 0.8px; font-weight: 600; }
 .mcard .mv { color: var(--white); font-size: 17px; font-weight: 700; letter-spacing: 0.3px; }
 .mcard .mc { font-size: 10.5px; font-weight: 600; }
@@ -715,6 +731,63 @@ kbd {
   font-family: var(--mono);
   font-weight: 700;
 }
+
+/* ============= CUSTOM SOURCE FORM ============= */
+.add-source {
+  padding: 12px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  display: grid;
+  grid-template-columns: 1fr 2fr auto;
+  gap: 6px;
+}
+@media (max-width: 600px) {
+  .add-source { grid-template-columns: 1fr; }
+}
+.add-source input {
+  background: var(--bg);
+  color: var(--white);
+  border: 1px solid var(--border2);
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 6px 9px;
+  outline: none;
+}
+.add-source input:focus { border-color: var(--amber); }
+.add-source input::placeholder { color: var(--dim2); }
+.add-source button {
+  background: var(--amber);
+  color: #000;
+  border: none;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 6px 14px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.add-source button:hover { background: var(--green); }
+.add-hint {
+  grid-column: 1 / -1;
+  color: var(--dim);
+  font-size: 10px;
+  letter-spacing: 0.3px;
+  margin-top: 2px;
+}
+
+.src-row .sremove {
+  background: transparent;
+  border: 1px solid var(--red);
+  color: var(--red);
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 6px;
+  cursor: pointer;
+  letter-spacing: 0.6px;
+}
+.src-row .sremove:hover { background: var(--red); color: #fff; }
 
 /* ============= FOCUS / SELECTION ============= */
 .item.focused {
