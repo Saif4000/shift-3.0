@@ -380,6 +380,7 @@ const state = {
   modalItem: null,
   modalList: [],
   modalIdx: 0,
+  usGovSubtab: 'rollcall',
 };
 
 /* ===== Hydrate from localStorage immediately so first paint shows data ===== */
@@ -2431,6 +2432,19 @@ const US_GOV_SOURCE_IDS = new Set([
   'treasury', 'treas-news', 'ofac',
   'senate-rc', 'house-rc',
 ]);
+
+/* US GOV sub-tabs — drill down by department. Rendered as a chip strip
+ * at the top of the us-gov view; click swaps the filter. */
+const US_GOV_SUBTABS = [
+  { id: 'rollcall', label: 'ROLL CALL',       sources: ['senate-rc', 'house-rc'] },
+  { id: 'wh',       label: 'WHITE HOUSE',     sources: ['wh', 'wh-news', 'trump-ts'] },
+  { id: 'state',    label: 'STATE · DOS',     sources: ['dos', 'dos-pr'] },
+  { id: 'war',      label: 'WAR · DOD',       sources: ['dow'] },
+  { id: 'energy',   label: 'ENERGY · DOE',    sources: ['doe', 'doe-news'] },
+  { id: 'justice',  label: 'JUSTICE · DOJ',   sources: ['doj', 'doj-news'] },
+  { id: 'treasury', label: 'TREASURY · OFAC', sources: ['treasury', 'treas-news', 'ofac'] },
+  { id: 'all',      label: 'ALL US-GOV',      sources: null }, // null = use full US_GOV_SOURCE_IDS
+];
 function isUsGovItem(it) {
   if (!it) return false;
   if (US_GOV_SOURCE_IDS.has(it.sourceId)) return true;
@@ -2559,20 +2573,32 @@ function renderContent() {
   }
 
   let items = state.items;
+  let prefix = '';
   if (activeTab === 'uae-gov') {
     items = items.filter(isUaeGovItem);
   } else if (activeTab === 'us-gov') {
-    items = items.filter(isUsGovItem);
+    // Render department sub-tab strip + filter by the active sub-tab
+    const subId = state.usGovSubtab || 'rollcall';
+    const sub = US_GOV_SUBTABS.find((s) => s.id === subId) || US_GOV_SUBTABS[0];
+    const set = sub.sources ? new Set(sub.sources) : null;
+    items = items.filter((it) => set ? set.has(it.sourceId) : isUsGovItem(it));
+    prefix = `
+      <div class="subtab-strip" id="us-gov-subtabs">
+        ${US_GOV_SUBTABS.map((s) =>
+          `<button class="subtab${s.id === subId ? ' active' : ''}" data-subtab="${s.id}">${escapeHtml(s.label)}</button>`
+        ).join('')}
+      </div>
+    `;
   } else if (activeTab !== 'all') {
     items = items.filter((i) => i.tags.includes(activeTab));
   }
 
   if (!items.length) {
-    c.innerHTML = `<div class="empty">No items yet for <b>${activeTab.toUpperCase()}</b>. Tap ↻ to refresh.</div>`;
+    c.innerHTML = prefix + `<div class="empty">No items yet for <b>${escapeHtml(activeTab.toUpperCase())}</b>. Hit ↻ or wait for the next cron tick.</div>`;
     return;
   }
 
-  c.innerHTML = items.slice(0, 300).map(renderItem).join('');
+  c.innerHTML = prefix + items.slice(0, 300).map(renderItem).join('');
   // Cache the rendered list for keyboard nav + modal next/prev
   state.modalList = items.slice(0, 300);
   state.focusedIdx = -1;
@@ -2605,7 +2631,17 @@ function renderItem(it) {
  * only via the OPEN AT SOURCE action inside the card.
  */
 function bindContentClicks() {
+  const subtabHandler = (e) => {
+    const btn = e.target.closest('.subtab');
+    if (!btn) return;
+    const id = btn.dataset.subtab;
+    if (!id) return;
+    state.usGovSubtab = id;
+    renderContent();
+    return true;
+  };
   const handler = (e) => {
+    if (subtabHandler(e)) return;
     const art = e.target.closest('article.item');
     if (!art) return;
     // Don't hijack actual tag clicks etc — only the title link / article body

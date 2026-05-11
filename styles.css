@@ -649,6 +649,40 @@ body.fetching .dataflow {
 .tag-ai       { color: var(--violet); }
 .tag-health   { color: var(--cyan); }
 
+/* ============= DEPARTMENT SUB-TABS (US GOV view) ============= */
+.subtab-strip {
+  display: flex;
+  overflow-x: auto;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  scrollbar-width: none;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+.subtab-strip::-webkit-scrollbar { display: none; }
+.subtab {
+  background: transparent;
+  border: none;
+  color: var(--dim);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 7px 12px;
+  cursor: pointer;
+  border-right: 1px solid var(--border);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.subtab:hover { color: var(--white); background: var(--hover); }
+.subtab.active {
+  color: var(--amber);
+  background: var(--bg);
+  border-top: 2px solid var(--amber);
+  padding-top: 5px;
+}
+
 /* ============= SECTION HEAD ============= */
 .section-head {
   background: var(--bg2);
