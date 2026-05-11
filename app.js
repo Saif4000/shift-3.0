@@ -1223,8 +1223,9 @@ function initMapOnce() {
   }).addTo(leafletMap);
 
   // ---- Layer panes for explicit z-ordering (per SITAWARE convention) ----
-  // base 200 → overlay 400 → cables 500 → sigmet 520 → quakes 540 →
-  // tracks 600 → aircraft 650 → HUD 700+
+  // base 200 → overlay 400 → airspace 480 → cables 500 → sigmet 520 →
+  // quakes 540 → tracks 600 → aircraft 650 → HUD 700+
+  leafletMap.createPane('airspacePane').style.zIndex = '480';
   leafletMap.createPane('cablesPane').style.zIndex   = '500';
   leafletMap.createPane('sigmetPane').style.zIndex   = '520';
   leafletMap.createPane('quakesPane').style.zIndex   = '540';
@@ -1296,6 +1297,7 @@ function initMapOnce() {
   renderAirportsAndBases();
 
   // ---- SITAWARE overlays ----
+  fetchAndRenderAirspace();    // FIR / CTA / restricted / danger zones
   renderCables();              // submarine cables
   fetchAndRenderSigmets();     // NOAA aviation weather hazards
   fetchAndRenderQuakes();      // USGS earthquakes
@@ -1303,15 +1305,16 @@ function initMapOnce() {
   // ---- Layer control panel — toggle each overlay on/off ----
   setTimeout(() => {
     const overlays = {};
-    if (civilLayer)     overlays['◯ AIRPORTS · CIV']     = civilLayer;
-    if (milLayer)       overlays['◆ MIL BASES']           = milLayer;
-    if (cableLayer)     overlays['~ SUB CABLES']          = cableLayer;
-    if (sigmetLayer)    overlays['⛅ SIGMETs']             = sigmetLayer;
-    if (quakeLayer)     overlays['◉ EARTHQUAKES 24h']     = quakeLayer;
+    if (civilLayer)    overlays['◯ AIRPORTS · CIV']  = civilLayer;
+    if (milLayer)      overlays['◆ MIL BASES']        = milLayer;
+    if (airspaceLayer) overlays['◇ AIRSPACE / FIR']   = airspaceLayer;
+    if (cableLayer)    overlays['~ SUB CABLES']       = cableLayer;
+    if (sigmetLayer)   overlays['⛅ SIGMETs']          = sigmetLayer;
+    if (quakeLayer)    overlays['◉ EARTHQUAKES 24h']  = quakeLayer;
     L.control.layers(null, overlays, {
       position: 'topleft', collapsed: true,
     }).addTo(leafletMap);
-  }, 1500);
+  }, 2000);
 
   // ---- Plane dead-reckoning tick — makes tracks move between fetches ----
   startPlaneTick();
@@ -1454,6 +1457,66 @@ function clearTrack(icao) {
   if (line && leafletMap) leafletMap.removeLayer(line);
   trackLines.delete(icao);
   trackHistory.delete(icao);
+}
+
+/* ============================================================
+ * AIRSPACE — FIR / CTA / CTR / restricted / danger / prohibited polygons
+ * from OpenAIP via /api/airspace (server-side proxy hides the key).
+ * Gulf bbox: lon 40-70, lat 12-42 covers MENA + Iran.
+ * ============================================================ */
+let airspaceLayer = null;
+
+/** OpenAIP type code → display style */
+function airspaceStyle(t) {
+  switch (Number(t)) {
+    case 19: return { color: '#5fc7ff', weight: 1.4, opacity: 0.55, dashArray: '6 4', fillOpacity: 0.02, label: 'FIR' };
+    case 12: return { color: '#b794ff', weight: 1.2, opacity: 0.45, dashArray: '4 3', fillOpacity: 0.02, label: 'CTA' };
+    case 4:  return { color: '#ffaa00', weight: 1.2, opacity: 0.55, dashArray: '2 3', fillOpacity: 0.04, label: 'CTR' };
+    case 8:  return { color: '#ffaa00', weight: 1.0, opacity: 0.45, dashArray: '3 3', fillOpacity: 0.03, label: 'TMA' };
+    case 1:  return { color: '#ff3344', weight: 1.4, opacity: 0.6,  dashArray: '4 2', fillOpacity: 0.05, label: 'RESTR' };
+    case 2:  return { color: '#ff6ad5', weight: 1.4, opacity: 0.6,  dashArray: '5 3', fillOpacity: 0.05, label: 'DANGER' };
+    case 3:  return { color: '#ff3344', weight: 1.8, opacity: 0.7,  dashArray: '2 2', fillOpacity: 0.08, label: 'PROHIB' };
+    default: return { color: '#888',    weight: 0.8, opacity: 0.35, dashArray: '2 4', fillOpacity: 0.02, label: 'OTHER' };
+  }
+}
+
+async function fetchAndRenderAirspace() {
+  if (!leafletMap) return;
+  try {
+    // FIR (19) + CTA (12) + RESTRICTED (1) + DANGER (2) + PROHIBITED (3)
+    const r = await fetchTimeout('/api/airspace?bbox=40,12,70,42&types=19,12,1,2,3&limit=300', {}, 12000);
+    if (!r.ok) return;
+    const j = await r.json();
+    if (!j.ok || !Array.isArray(j.items)) return;
+
+    if (airspaceLayer) leafletMap.removeLayer(airspaceLayer);
+    airspaceLayer = L.layerGroup();
+
+    j.items.forEach((a) => {
+      const geom = a.geometry;
+      if (!geom || !geom.coordinates) return;
+      const style = airspaceStyle(a.type);
+      const name = a.name || a.icaoClass || a.identifier || `airspace ${a.type}`;
+      try {
+        L.geoJSON({ type: 'Feature', geometry: geom, properties: {} }, {
+          style: () => ({
+            color: style.color,
+            weight: style.weight,
+            opacity: style.opacity,
+            dashArray: style.dashArray,
+            fillColor: style.color,
+            fillOpacity: style.fillOpacity,
+            pane: 'airspacePane',
+            interactive: true,
+          }),
+        }).bindTooltip(
+          `<b>${escapeHtml(style.label)}</b> · ${escapeHtml(name)}`,
+          { sticky: true }
+        ).addTo(airspaceLayer);
+      } catch (e) { /* skip malformed */ }
+    });
+    airspaceLayer.addTo(leafletMap);
+  } catch (e) { console.warn('[airspace]', e.message); }
 }
 
 /* ============================================================
