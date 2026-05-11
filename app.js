@@ -1086,6 +1086,12 @@ function initMapOnce() {
     maxZoom: 19, subdomains: 'abcd', opacity: 0.65,
   }).addTo(leafletMap);
 
+  // OpenSeaMap maritime overlay — adds ports, navigation marks and shipping
+  // lane annotations. Free, no key, tiles only.
+  L.tileLayer('https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png', {
+    maxZoom: 18, opacity: 0.85, attribution: '© OpenSeaMap',
+  }).addTo(leafletMap);
+
   // ---- Graticule (lat/lon lines every 10°, faint) ----
   const gratStyle = { color: '#252525', weight: 0.6, opacity: 0.8, interactive: false };
   for (let lat = -60; lat <= 80; lat += 10) L.polyline([[lat, -180], [lat, 180]], gratStyle).addTo(leafletMap);
@@ -1130,6 +1136,9 @@ function initMapOnce() {
     });
   });
 
+  // ---- AIR/SEA mode toggle ----
+  bindMapMode();
+
   // ---- Mouse position → HUD DTG ----
   leafletMap.on('mousemove', (e) => {
     const lat = e.latlng.lat.toFixed(2);
@@ -1171,6 +1180,35 @@ function switchPreset(key) {
   const v = $('#hud-view'); if (v) v.textContent = key.toUpperCase();
   // refetch aircraft for the new bbox
   refreshMapData();
+}
+
+/* AIR/SEA mode toggle on the map view */
+function setMapMode(mode) {
+  const overlay = document.getElementById('marine-overlay');
+  if (!overlay) return;
+  if (mode === 'sea') {
+    // Lazy-set the iframe src so it doesn't load until first toggle
+    if (!overlay.dataset.loaded) {
+      overlay.src = 'https://www.marinetraffic.com/en/ais/embed/zoom:7/centery:25.5/centerx:55.5/maptype:1/shownames:false/mmsi:0/shipid:0/fleet:/fleet_id:0/vtypes:/showmenu:false/remember:false';
+      overlay.dataset.loaded = '1';
+    }
+    overlay.hidden = false;
+  } else {
+    overlay.hidden = true;
+  }
+  document.querySelectorAll('.mode-btn').forEach((b) =>
+    b.classList.toggle('active', b.dataset.mode === mode)
+  );
+}
+function bindMapMode() {
+  const wrap = document.getElementById('map-mode');
+  if (!wrap || wrap.dataset.bound) return;
+  wrap.dataset.bound = '1';
+  wrap.addEventListener('click', (e) => {
+    const b = e.target.closest('.mode-btn');
+    if (!b) return;
+    setMapMode(b.dataset.mode);
+  });
 }
 
 async function refreshMapData() {
@@ -1672,8 +1710,8 @@ function moveFocus(delta) {
 /* ============================================================
  * KEYBOARD SHORTCUTS
  * ============================================================ */
-const TAB_ORDER = ['all','uae-gov','security','politics','economy','ai','markets','map','live','tensions','sources'];
-const TAB_LETTERS = { a: 'all', u: 'uae-gov', s: 'security', p: 'politics', e: 'economy', i: 'ai', m: 'markets', v: 'map', l: 'live', t: 'tensions' };
+const TAB_ORDER = ['all','uae-gov','live','map','security','politics','economy','ai','markets','tensions','sources'];
+const TAB_LETTERS = { a: 'all', u: 'uae-gov', l: 'live', v: 'map', s: 'security', p: 'politics', e: 'economy', i: 'ai', m: 'markets', t: 'tensions' };
 
 /* Sources that belong to the UAE GOV tab (also matched by region prefix 'AE-') */
 const UAE_GOV_SOURCE_IDS = new Set([
@@ -2217,6 +2255,10 @@ const THREAT_RE = {
   cruise:    /\b(cruise missile|Tomahawk|Kalibr|Storm Shadow|SCALP|Quds|Paveh|Soumar|Hoveyzeh|land[- ]?attack cruise|anti[- ]?ship missile)\b/i,
 };
 
+/* UAE-scoped — item must mention UAE / Emirates / a UAE emirate or be from
+ * a UAE-government source before it's counted. */
+const UAE_TARGET_RE = /\b(UAE|Emirates|U\.A\.E\.|Abu[ -]?Dhabi|Dubai|Sharjah|Fujairah|Ajman|Umm[ -]?al[- ]?Quwain|Ras[ -]?al[- ]?Khaimah|Al[ -]?Ain|Hormuz|Strait of Hormuz)\b/i;
+
 function computeThreats() {
   const now = Date.now();
   const day = 86_400_000;
@@ -2227,6 +2269,10 @@ function computeThreats() {
     const bucket = age < day ? 0 : age < 2 * day ? 1 : null;
     if (bucket === null) continue;
     const text = it.title + ' ' + (it.summary || '');
+    // UAE-scope filter: title/summary must reference UAE, OR the item source
+    // is a UAE government channel
+    const isUaeSource = typeof it.region === 'string' && it.region.startsWith('AE');
+    if (!isUaeSource && !UAE_TARGET_RE.test(text)) continue;
     if (!INTERCEPT_RE.test(text)) continue;
     if (THREAT_RE.drone.test(text))     counts.drone[bucket]++;
     if (THREAT_RE.ballistic.test(text)) counts.ballistic[bucket]++;
@@ -2289,6 +2335,11 @@ function preload() {
     tracked(() => fetchFX().then(() => { renderTicker(); renderStatusStrip(); })),
     tracked(() => fetchCrypto().then(() => { renderTicker(); renderStatusStrip(); })),
     tracked(() => fetchTensions().then(() => { if (activeTab === 'tensions') renderContent(); })),
+    // Pre-fetch aircraft so the MAP tab is populated the moment the user
+    // clicks it — no awkward 5s 'no planes' window.
+    tracked(() => fetchAircraft().then(() => {
+      if (activeTab === 'map' && leafletMap) renderAircraft();
+    })),
   ]).then(() => {
     state.lastUpdate = new Date();
     updateFooter();

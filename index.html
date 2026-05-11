@@ -98,7 +98,7 @@
   </div>
 
   <div class="threat-watch" id="threat-watch">
-    <span class="tw-tag">▮ THREAT WATCH</span>
+    <span class="tw-tag">▮ THREAT WATCH · UAE</span>
     <span class="tw-cell"><b>DRONES</b><span id="tw-drone">0</span><span class="tw-delta" id="tw-drone-d">▬</span></span>
     <span class="tw-cell"><b>BAL MSL</b><span id="tw-ballistic">0</span><span class="tw-delta" id="tw-ballistic-d">▬</span></span>
     <span class="tw-cell"><b>CRUISE</b><span id="tw-cruise">0</span><span class="tw-delta" id="tw-cruise-d">▬</span></span>
@@ -112,11 +112,11 @@
 
   <div class="ticker-stack">
     <div class="ticker tk-lane lane-oil">
-      <span class="lane-label">OIL · ENERGY ◀</span>
+      <span class="lane-label">◀ OIL</span>
       <div id="ticker-oil" class="ticker-track ticker-rtl">LOADING ENERGY…</div>
     </div>
     <div class="ticker tk-lane lane-fx">
-      <span class="lane-label">▶ CRYPTO · FX</span>
+      <span class="lane-label">CRYPTO ▶</span>
       <div id="ticker-fx" class="ticker-track ticker-ltr">LOADING CRYPTO · FX…</div>
     </div>
   </div>
@@ -133,13 +133,13 @@
   <nav class="tabs" id="tabs">
     <button class="tab active" data-tab="all">ALL</button>
     <button class="tab" data-tab="uae-gov">UAE GOV</button>
+    <button class="tab" data-tab="live">LIVE</button>
+    <button class="tab" data-tab="map">MAP</button>
     <button class="tab" data-tab="security">SECURITY</button>
     <button class="tab" data-tab="politics">POLITICS</button>
     <button class="tab" data-tab="economy">ECONOMY</button>
     <button class="tab" data-tab="ai">AI</button>
     <button class="tab" data-tab="markets">MARKETS</button>
-    <button class="tab" data-tab="map">MAP</button>
-    <button class="tab" data-tab="live">LIVE</button>
     <button class="tab" data-tab="tensions">TENSIONS</button>
     <button class="tab" data-tab="sources">SOURCES</button>
   </nav>
@@ -156,6 +156,13 @@
     </div>
     <div class="map-wrap">
       <div id="world-map" class="map-container"></div>
+      <iframe class="marine-overlay" id="marine-overlay" hidden
+              loading="lazy"
+              referrerpolicy="no-referrer-when-downgrade"></iframe>
+      <div class="map-mode" id="map-mode">
+        <button class="mode-btn active" data-mode="air">✈ AIR</button>
+        <button class="mode-btn" data-mode="sea">⚓ SEA</button>
+      </div>
       <span class="map-corner tl"></span>
       <span class="map-corner tr"></span>
       <span class="map-corner bl"></span>
@@ -184,16 +191,6 @@
         <span class="leg leg-lo">▲ LOW</span>
         <span class="leg leg-choke">◆ CHOKEPOINT</span>
       </div>
-    </div>
-    <div class="section-head">
-      MARINE TRAFFIC — GULF / HORMUZ
-      <span class="sub">MarineTraffic · live AIS</span>
-    </div>
-    <div class="marine-wrap">
-      <iframe class="marine-frame"
-              src="https://www.marinetraffic.com/en/ais/embed/zoom:7/centery:25.5/centerx:55.5/maptype:1/shownames:false/mmsi:0/shipid:0/fleet:/fleet_id:0/vtypes:/showmenu:false/remember:false"
-              loading="lazy"
-              referrerpolicy="no-referrer-when-downgrade"></iframe>
     </div>
     <div class="section-head">
       GCC AIRSPACE — NOTAMs / ADVISORIES

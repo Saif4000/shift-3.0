@@ -13,8 +13,10 @@
 export const config = { runtime: 'edge' };
 
 const PRESETS = {
-  uae:    { lat: 24.5, lon: 54.4, radius: 300 },
-  hormuz: { lat: 26.6, lon: 56.3, radius: 200 },
+  // Widened — at 300nm we were typically returning only 4-5 airborne aircraft
+  // for the Gulf. 500nm covers GCC + southern Iran + most of Arabian Sea.
+  uae:    { lat: 24.5, lon: 54.4, radius: 500 },
+  hormuz: { lat: 26.6, lon: 56.3, radius: 300 },
   mena:   { lat: 27.0, lon: 42.0, radius: 1200 },
   redsea: { lat: 20.0, lon: 38.0, radius: 600 },
   med:    { lat: 37.0, lon: 18.0, radius: 1000 },
