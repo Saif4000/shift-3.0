@@ -32,16 +32,29 @@ export default async function handler(request) {
 
   const url = `https://opensky-network.org/api/states/all?lamin=${bbox.lamin}&lamax=${bbox.lamax}&lomin=${bbox.lomin}&lomax=${bbox.lomax}`;
 
+  const headers = {
+    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Accept': 'application/json, text/plain, */*',
+    'Accept-Language': 'en-US,en;q=0.9',
+  };
+  const user = process.env.OPENSKY_USER;
+  const pass = process.env.OPENSKY_PASS;
+  if (user && pass) {
+    headers['Authorization'] = 'Basic ' + btoa(`${user}:${pass}`);
+  }
+
   try {
-    const r = await fetch(url, { cache: 'no-store' });
+    const r = await fetch(url, { headers, cache: 'no-store' });
     if (!r.ok) {
-      return json(200, { ok: false, error: 'OpenSky HTTP ' + r.status, preset });
+      const body = await r.text().catch(() => '');
+      return json(200, { ok: false, error: 'OpenSky HTTP ' + r.status, preset, bodyPreview: body.slice(0, 200) });
     }
     const j = await r.json();
     return json(200, {
       ok: true,
       preset,
       bbox,
+      authed: !!user,
       time: j?.time || null,
       states: j?.states || [],
     });
