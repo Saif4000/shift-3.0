@@ -11,10 +11,10 @@ export const config = {
 };
 
 /* Hash sourced from Vercel env var SHIFT_PASSWORD_HASH (set via dashboard
- * or `vercel env add`). The fallback is the original Swallow-Granite14@ hash
+ * or `vercel env add`). The fallback is the kill-bell1@ hash
  * to keep the gate working even if the env var is missing. */
 const HASH = (typeof process !== 'undefined' && process.env && process.env.SHIFT_PASSWORD_HASH) ||
-             '25994aa86041c167e447ac8bb85ee69f1d10ad3a075fd8c9cd73bfe67dd43106';
+             '8b761177bd23775372562cdde2e0486fcad0d0238b6820f2a6c40b27756d42e8';
 const COOKIE = 'shift_auth';
 
 async function sha256Hex(text) {
