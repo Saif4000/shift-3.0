@@ -2434,8 +2434,8 @@ function moveFocus(delta) {
 /* ============================================================
  * KEYBOARD SHORTCUTS
  * ============================================================ */
-const TAB_ORDER = ['all','security','politics','economy','ai','markets','tensions','sources','us-gov','uae-gov','marine','live','map','sata'];
-const TAB_LETTERS = { a: 'all', s: 'security', p: 'politics', e: 'economy', i: 'ai', m: 'markets', t: 'tensions', w: 'us-gov', u: 'uae-gov', n: 'marine', l: 'live', v: 'map', x: 'sata' };
+const TAB_ORDER = ['all','security','politics','economy','ai','markets','tensions','sources','us-gov','uae-gov','marine','live','map'];
+const TAB_LETTERS = { a: 'all', s: 'security', p: 'politics', e: 'economy', i: 'ai', m: 'markets', t: 'tensions', w: 'us-gov', u: 'uae-gov', n: 'marine', l: 'live', v: 'map' };
 
 /* Sources that belong to the UAE GOV tab (also matched by region prefix 'AE-') */
 const UAE_GOV_SOURCE_IDS = new Set([
@@ -2570,22 +2570,21 @@ function renderContent() {
   const lv = $('#live-view');
 
   const marineView = document.getElementById('marine-view');
-  const sataView = document.getElementById('sata-view');
 
   if (activeTab === 'map') {
-    c.hidden = true; lv.hidden = true; if (marineView) marineView.hidden = true; if (sataView) sataView.hidden = true; mv.hidden = false;
+    c.hidden = true; lv.hidden = true; if (marineView) marineView.hidden = true; mv.hidden = false;
     initMapOnce();
     setTimeout(() => { try { leafletMap?.invalidateSize(true); } catch {} }, 60);
     setTimeout(() => { try { leafletMap?.invalidateSize(true); } catch {} }, 300);
     return;
   }
   if (activeTab === 'live') {
-    c.hidden = true; mv.hidden = true; if (marineView) marineView.hidden = true; if (sataView) sataView.hidden = true; lv.hidden = false;
+    c.hidden = true; mv.hidden = true; if (marineView) marineView.hidden = true; lv.hidden = false;
     renderLive();
     return;
   }
   if (activeTab === 'marine') {
-    c.hidden = true; mv.hidden = true; lv.hidden = true; if (sataView) sataView.hidden = true; if (marineView) marineView.hidden = false;
+    c.hidden = true; mv.hidden = true; lv.hidden = true; if (marineView) marineView.hidden = false;
     const frame = document.getElementById('marine-tab-frame');
     if (frame && !frame.dataset.loaded) {
       frame.src = 'https://www.marinetraffic.com/en/ais/embed/zoom:7/centery:25.5/centerx:55.5/maptype:1/shownames:false/mmsi:0/shipid:0/fleet:/fleet_id:0/vtypes:/showmenu:false/remember:false';
@@ -2593,16 +2592,7 @@ function renderContent() {
     }
     return;
   }
-  if (activeTab === 'sata') {
-    c.hidden = true; mv.hidden = true; lv.hidden = true; if (marineView) marineView.hidden = true; if (sataView) sataView.hidden = false;
-    const frame = document.getElementById('sata-tab-frame');
-    if (frame && !frame.dataset.loaded) {
-      frame.src = 'https://github1s.com/Saif4000/Sat1.0';
-      frame.dataset.loaded = '1';
-    }
-    return;
-  }
-  mv.hidden = true; lv.hidden = true; if (marineView) marineView.hidden = true; if (sataView) sataView.hidden = true; c.hidden = false;
+  mv.hidden = true; lv.hidden = true; if (marineView) marineView.hidden = true; c.hidden = false;
 
   if (state.searchActive) { renderSearch(); return; }
 
