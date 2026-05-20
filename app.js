@@ -363,6 +363,12 @@ const CHOKEPOINTS = [
  * streaming live.
  */
 const LIVE_CHANNELS = [
+  // Regional Arabic live desks
+  { channelId: 'UCfiwzLy-8yKzIbsmZTzxDgw', name: 'AL JAZEERA AR',    desk: 'الدوحة · QA' },
+  { channelId: 'UCw_qCdaeg88nFbV0_zhUM_w', name: 'SKY NEWS ARABIA',  desk: 'أبوظبي · AE' },
+  { channelId: 'UCgvfTQpcQ3O0BBaivYIJC8w', name: 'AL ARABIYA',       desk: 'الرياض · SA' },
+  { channelId: 'UCgmGqkmL3-zoXuw-S86xJqA', name: 'AL HADATH',        desk: 'الرياض · SA' },
+  // English desks
   { channelId: 'UCIALMKvObZNtJ6AmdCLP7Lg', name: 'BLOOMBERG TV',     desk: 'NEW YORK · US' },
   { channelId: 'UCNye-wNBqNL5ZzHSJj3l8Bg', name: 'AL JAZEERA EN',    desk: 'DOHA · QA' },
   { channelId: 'UCQfwfsi5VrQ8yKZ-UWmAEFg', name: 'FRANCE 24 EN',     desk: 'PARIS · FR' },
@@ -2428,8 +2434,8 @@ function moveFocus(delta) {
 /* ============================================================
  * KEYBOARD SHORTCUTS
  * ============================================================ */
-const TAB_ORDER = ['all','security','politics','economy','ai','markets','tensions','sources','us-gov','uae-gov','marine','live','map'];
-const TAB_LETTERS = { a: 'all', s: 'security', p: 'politics', e: 'economy', i: 'ai', m: 'markets', t: 'tensions', w: 'us-gov', u: 'uae-gov', n: 'marine', l: 'live', v: 'map' };
+const TAB_ORDER = ['all','security','politics','economy','ai','markets','tensions','sources','us-gov','uae-gov','marine','live','map','sata'];
+const TAB_LETTERS = { a: 'all', s: 'security', p: 'politics', e: 'economy', i: 'ai', m: 'markets', t: 'tensions', w: 'us-gov', u: 'uae-gov', n: 'marine', l: 'live', v: 'map', x: 'sata' };
 
 /* Sources that belong to the UAE GOV tab (also matched by region prefix 'AE-') */
 const UAE_GOV_SOURCE_IDS = new Set([
@@ -2564,21 +2570,22 @@ function renderContent() {
   const lv = $('#live-view');
 
   const marineView = document.getElementById('marine-view');
+  const sataView = document.getElementById('sata-view');
 
   if (activeTab === 'map') {
-    c.hidden = true; lv.hidden = true; if (marineView) marineView.hidden = true; mv.hidden = false;
+    c.hidden = true; lv.hidden = true; if (marineView) marineView.hidden = true; if (sataView) sataView.hidden = true; mv.hidden = false;
     initMapOnce();
     setTimeout(() => { try { leafletMap?.invalidateSize(true); } catch {} }, 60);
     setTimeout(() => { try { leafletMap?.invalidateSize(true); } catch {} }, 300);
     return;
   }
   if (activeTab === 'live') {
-    c.hidden = true; mv.hidden = true; if (marineView) marineView.hidden = true; lv.hidden = false;
+    c.hidden = true; mv.hidden = true; if (marineView) marineView.hidden = true; if (sataView) sataView.hidden = true; lv.hidden = false;
     renderLive();
     return;
   }
   if (activeTab === 'marine') {
-    c.hidden = true; mv.hidden = true; lv.hidden = true; if (marineView) marineView.hidden = false;
+    c.hidden = true; mv.hidden = true; lv.hidden = true; if (sataView) sataView.hidden = true; if (marineView) marineView.hidden = false;
     const frame = document.getElementById('marine-tab-frame');
     if (frame && !frame.dataset.loaded) {
       frame.src = 'https://www.marinetraffic.com/en/ais/embed/zoom:7/centery:25.5/centerx:55.5/maptype:1/shownames:false/mmsi:0/shipid:0/fleet:/fleet_id:0/vtypes:/showmenu:false/remember:false';
@@ -2586,7 +2593,16 @@ function renderContent() {
     }
     return;
   }
-  mv.hidden = true; lv.hidden = true; if (marineView) marineView.hidden = true; c.hidden = false;
+  if (activeTab === 'sata') {
+    c.hidden = true; mv.hidden = true; lv.hidden = true; if (marineView) marineView.hidden = true; if (sataView) sataView.hidden = false;
+    const frame = document.getElementById('sata-tab-frame');
+    if (frame && !frame.dataset.loaded) {
+      frame.src = 'http://localhost:3000/';
+      frame.dataset.loaded = '1';
+    }
+    return;
+  }
+  mv.hidden = true; lv.hidden = true; if (marineView) marineView.hidden = true; if (sataView) sataView.hidden = true; c.hidden = false;
 
   if (state.searchActive) { renderSearch(); return; }
 
@@ -3269,10 +3285,112 @@ function bootSequence() {
 /* ============================================================
  * THEME (light / dark) and LANG (en / ar) toggles
  * ============================================================ */
+
+/* Master translation map. Anything you want translated when the user toggles
+ * to Arabic lives here. Keys grouped by section. */
 const I18N = {
-  en: { feed: 'feed', refresh: 'Refresh', themeTitle: 'Toggle light / dark', langTitle: 'تبديل اللغة' },
-  ar: { feed: 'الأخبار', refresh: 'تحديث', themeTitle: 'وضع داكن / فاتح', langTitle: 'Switch language' },
+  en: {
+    tagline: 'REGIONAL INTEL TERMINAL',
+    refresh: 'Refresh',
+    searchPlaceholder: 'QUERY · hormuz · idf · oil · sanctions · iran · houthi · uae…',
+    searchBtn: 'SEARCH',
+    footerNote: 'No AI summaries · raw headlines only',
+    nextUpdate: 'next in',
+    alert: 'ALERT',
+    threatWatch: '▮ MoI THREAT WATCH',
+    threatNote: 'last 24h · Δ vs prior 24h · GCC + region · monotonic-by-nature',
+    tabs: {
+      all: 'ALL', security: 'SECURITY', politics: 'POLITICS', economy: 'ECONOMY',
+      ai: 'AI', markets: 'MARKETS', tensions: 'TENSIONS', sources: 'SOURCES',
+      'us-gov': 'US GOV', 'uae-gov': 'UAE GOV', marine: 'MARINE', live: 'LIVE', map: 'MAP',
+    },
+    presets: { uae: 'UAE', hormuz: 'HORMUZ', mena: 'MENA', redsea: 'RED SEA', med: 'MED', global: 'GLOBAL' },
+    modes:   { air: '✈ AIR', sea: '⚓ SEA', fr24: '▲ FR24' },
+    sectionHeads: {
+      aircraft: 'AIRCRAFT LIVE — TACTICAL',
+      notams:   'GCC AIRSPACE — NOTAMs / ADVISORIES',
+      marine:   'MARINE TRAFFIC — GULF / HORMUZ / RED SEA',
+      live:     'LIVE BROADCASTS — REGIONAL & GLOBAL DESKS',
+    },
+  },
+  ar: {
+    tagline: 'منصة الاستخبارات الإقليمية',
+    refresh: 'تحديث',
+    searchPlaceholder: 'بحث · هرمز · النفط · العقوبات · إيران · الحوثي · الإمارات…',
+    searchBtn: 'بحث',
+    footerNote: 'بدون ملخصات ذكاء اصطناعي · عناوين خام فقط',
+    nextUpdate: 'التحديث القادم خلال',
+    alert: 'تنبيه',
+    threatWatch: '▮ مرصد التهديدات',
+    threatNote: 'آخر 24 ساعة · مقارنة بالـ 24 ساعة السابقة · الخليج والمنطقة',
+    tabs: {
+      all: 'الكل', security: 'الأمن', politics: 'السياسة', economy: 'الاقتصاد',
+      ai: 'ذكاء اصطناعي', markets: 'الأسواق', tensions: 'التوترات', sources: 'المصادر',
+      'us-gov': 'الحكومة الأمريكية', 'uae-gov': 'الحكومة الإماراتية',
+      marine: 'بحري', live: 'بث مباشر', map: 'الخريطة',
+    },
+    presets: { uae: 'الإمارات', hormuz: 'هرمز', mena: 'الشرق الأوسط', redsea: 'البحر الأحمر', med: 'المتوسط', global: 'العالم' },
+    modes:   { air: '✈ جوي', sea: '⚓ بحري', fr24: '▲ FR24' },
+    sectionHeads: {
+      aircraft: 'الطيران المباشر — الخريطة التكتيكية',
+      notams:   'المجال الجوي الخليجي — إشعارات NOTAM',
+      marine:   'الحركة البحرية — الخليج / هرمز / البحر الأحمر',
+      live:     'البث المباشر — الإقليمي والعالمي',
+    },
+  },
 };
+
+function applyI18n(lang) {
+  const t = I18N[lang] || I18N.en;
+  // Tagline
+  document.querySelectorAll('.tagline').forEach((el) => (el.textContent = t.tagline));
+  // Refresh button
+  const refBtn = document.getElementById('refresh');
+  if (refBtn) refBtn.setAttribute('title', t.refresh);
+  // Search
+  const q = document.getElementById('query');
+  if (q) q.setAttribute('placeholder', t.searchPlaceholder);
+  const go = document.getElementById('query-go');
+  if (go) go.textContent = t.searchBtn;
+  // Tabs
+  document.querySelectorAll('.tab[data-tab]').forEach((btn) => {
+    const k = btn.dataset.tab;
+    if (t.tabs[k]) btn.textContent = t.tabs[k];
+  });
+  // Map presets
+  document.querySelectorAll('.preset[data-preset]').forEach((btn) => {
+    const k = btn.dataset.preset;
+    if (t.presets[k]) btn.textContent = t.presets[k];
+  });
+  // Map modes
+  document.querySelectorAll('.mode-btn[data-mode]').forEach((btn) => {
+    const k = btn.dataset.mode;
+    if (t.modes[k]) btn.textContent = t.modes[k];
+  });
+  // Banner label
+  const ban = document.querySelector('.banner-tag');
+  if (ban) ban.textContent = t.alert;
+  // Threat watch label + note
+  const tw = document.querySelector('.tw-tag');
+  if (tw) tw.textContent = t.threatWatch;
+  const twSub = document.querySelector('.tw-sub');
+  if (twSub) twSub.textContent = t.threatNote;
+  // Section heads (use data-i18n attribute we add in HTML)
+  document.querySelectorAll('[data-i18n-section]').forEach((el) => {
+    const k = el.dataset.i18nSection;
+    if (t.sectionHeads[k]) {
+      // Preserve the .sub child if present
+      const sub = el.querySelector('.sub');
+      el.firstChild && (el.firstChild.nodeValue = ' ' + t.sectionHeads[k] + ' ');
+      if (sub) el.appendChild(sub);
+    }
+  });
+  // Footer note
+  const fn = document.querySelector('.footer .footer-note') ||
+             Array.from(document.querySelectorAll('.footer span')).find((s) =>
+               /No AI summaries|بدون ملخصات/.test(s.textContent));
+  if (fn) fn.textContent = t.footerNote;
+}
 function getCurrentTheme() {
   const t = document.documentElement.getAttribute('data-theme');
   if (t) return t;
@@ -3293,6 +3411,8 @@ function setLang(lang) {
   try { localStorage.setItem('shift:lang', lang); } catch (e) {}
   const btn = document.getElementById('lang-toggle');
   if (btn) btn.textContent = lang === 'ar' ? 'AR' : 'EN';
+  // Translate the visible UI
+  try { applyI18n(lang); } catch (e) { console.warn('[i18n]', e.message); }
 }
 function bindThemeAndLang() {
   // Initialize button labels to reflect what the pre-paint script applied
