@@ -2597,7 +2597,7 @@ function renderContent() {
     c.hidden = true; mv.hidden = true; lv.hidden = true; if (marineView) marineView.hidden = true; if (sataView) sataView.hidden = false;
     const frame = document.getElementById('sata-tab-frame');
     if (frame && !frame.dataset.loaded) {
-      frame.src = 'http://localhost:3000/';
+      frame.src = 'https://github1s.com/Saif4000/Sat1.0';
       frame.dataset.loaded = '1';
     }
     return;
