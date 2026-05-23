@@ -365,9 +365,9 @@ const CHOKEPOINTS = [
 const LIVE_CHANNELS = [
   // Regional Arabic live desks
   { channelId: 'UCfiwzLy-8yKzIbsmZTzxDgw', name: 'AL JAZEERA AR',    desk: 'الدوحة · QA' },
-  { channelId: 'UCw_qCdaeg88nFbV0_zhUM_w', name: 'SKY NEWS ARABIA',  desk: 'أبوظبي · AE' },
+  { channelId: 'UCab1phyEEA0c82udQd5y61Q', name: 'SKY NEWS ARABIA',  desk: 'أبوظبي · AE' },
   { channelId: 'UCgvfTQpcQ3O0BBaivYIJC8w', name: 'AL ARABIYA',       desk: 'الرياض · SA' },
-  { channelId: 'UCgmGqkmL3-zoXuw-S86xJqA', name: 'AL HADATH',        desk: 'الرياض · SA' },
+  { channelId: 'UCXprjKbrLmb1YuQmsEUBPTQ', name: 'AL HADATH',        desk: 'الرياض · SA' },
   // English desks
   { channelId: 'UCIALMKvObZNtJ6AmdCLP7Lg', name: 'BLOOMBERG TV',     desk: 'NEW YORK · US' },
   { channelId: 'UCNye-wNBqNL5ZzHSJj3l8Bg', name: 'AL JAZEERA EN',    desk: 'DOHA · QA' },
@@ -2212,7 +2212,7 @@ function renderLive() {
         const frame = tile.querySelector('.lt-frame');
         const ov = document.createElement('div');
         ov.className = 'lt-mute-overlay';
-        ov.textContent = 'MUTED · CLICK FOR AUDIO';
+        ov.textContent = (I18N[getCurrentLang()] || I18N.en).muted;
         frame.appendChild(ov);
       }
     } else {
@@ -2229,7 +2229,7 @@ function renderLive() {
       `<iframe src="${embedUrl(channelId)}"
                allow="autoplay; encrypted-media; picture-in-picture"
                allowfullscreen></iframe>
-       <div class="lt-mute-overlay">MUTED · CLICK FOR AUDIO</div>`;
+       <div class="lt-mute-overlay">${(I18N[getCurrentLang()] || I18N.en).muted}</div>`;
     tile.dataset.loaded = '1';
   };
 
@@ -2278,6 +2278,8 @@ function localMatch(it, q) {
 }
 
 function renderSearch() {
+  const tl = I18N[getCurrentLang()] || I18N.en;
+  const sl = tl.search;
   const q = state.searchQuery.toLowerCase();
   const local = state.items.filter((it) => localMatch(it, q));
   const sources = new Set();
@@ -2287,12 +2289,12 @@ function renderSearch() {
   $('#content').innerHTML = `
     <div class="search-summary">
       <span class="search-kw">▸ ${escapeHtml(state.searchQuery)}</span>
-      <span class="search-counts">${local.length} cached · ${state.searchGdelt.length} GDELT · ${sources.size} sources</span>
-      <span class="search-nb">RETRIEVAL ONLY · NO LLM SUMMARY</span>
+      <span class="search-counts">${local.length} ${sl.cachedSub} · ${state.searchGdelt.length} ${sl.gdeltSub} · ${sources.size} ${sl.srcSub}</span>
+      <span class="search-nb">${sl.retrieval}</span>
     </div>
-    <div class="section-head">CACHED FEED MATCHES <span class="sub">${local.length}</span></div>
-    ${local.length ? local.slice(0, 200).map(renderItem).join('') : '<div class="empty">No cached matches.</div>'}
-    <div class="section-head">GDELT 2.0 — LIVE WEB QUERY · 2 DAYS <span class="sub">${state.searchGdelt.length}</span></div>
+    <div class="section-head">${sl.cached} <span class="sub">${local.length}</span></div>
+    ${local.length ? local.slice(0, 200).map(renderItem).join('') : `<div class="empty">${sl.noCache}</div>`}
+    <div class="section-head">${sl.gdelt} <span class="sub">${state.searchGdelt.length}</span></div>
     ${state.searchGdelt.length ? state.searchGdelt.slice(0, 40).map((t, i) => `
       <article class="item" data-link="${escapeHtml(t.url)}" data-title="${escapeHtml(t.title)}" data-source="${escapeHtml(t.domain || '')}" data-time="${t.date.toISOString()}">
         <div class="meta-row">
@@ -2304,7 +2306,7 @@ function renderSearch() {
         <a class="title" href="${escapeHtml(t.url)}" target="_blank" rel="noopener">${escapeHtml(t.title)}</a>
         <div class="tag-row"><span class="tag tag-tension">QUERY</span></div>
       </article>
-    `).join('') : '<div class="empty">Fetching GDELT…</div>'}
+    `).join('') : `<div class="empty">${sl.fetching}</div>`}
   `;
   buildFocusList();
 }
@@ -2353,16 +2355,21 @@ function showItemModal(it) {
     (it.region ? ` · <span style="color:var(--white)">${escapeHtml(it.region)}</span>` : '');
 
   const tagsHtml = (it.tags || []).map((t) => `<span class="tag tag-${t}">${t}</span>`).join(' ');
+  const ml = (I18N[getCurrentLang()] || I18N.en).modal;
+  // In AR mode show translated title if available; always show original below
+  const isAr = getCurrentLang() === 'ar';
+  const displayTitle = (isAr && it.arTitle) ? it.arTitle : it.title;
+  const origBelow = (isAr && it.arTitle) ? it.title : (it.originalTitle || null);
   $('#modal-body').innerHTML = `
-    <div class="m-title">${escapeHtml(it.title)}</div>
-    ${it.originalTitle ? `<div class="m-orig">${escapeHtml(it.originalTitle)}</div>` : ''}
+    <div class="m-title">${escapeHtml(displayTitle)}</div>
+    ${origBelow ? `<div class="m-orig">${escapeHtml(origBelow)}</div>` : ''}
     ${it.summary ? `<div class="m-summary">${escapeHtml(it.summary)}</div>` : ''}
     <div style="margin-top:8px">${tagsHtml}</div>
     <div class="m-meta-grid">
-      <span class="m-k">SOURCE</span><span class="m-v">${escapeHtml(it.source || it.domain || '—')}</span>
-      <span class="m-k">REGION</span><span class="m-v">${escapeHtml(it.region || '—')}</span>
-      <span class="m-k">DATE</span><span class="m-v">${escapeHtml(it.date.toISOString())}</span>
-      <span class="m-k">URL</span><span class="m-v"><a href="${escapeHtml(it.link)}" target="_blank" rel="noopener">${escapeHtml(it.link)}</a></span>
+      <span class="m-k">${ml.source}</span><span class="m-v">${escapeHtml(it.source || it.domain || '—')}</span>
+      <span class="m-k">${ml.region}</span><span class="m-v">${escapeHtml(it.region || '—')}</span>
+      <span class="m-k">${ml.date}</span><span class="m-v">${escapeHtml(it.date.toISOString())}</span>
+      <span class="m-k">${ml.url}</span><span class="m-v"><a href="${escapeHtml(it.link)}" target="_blank" rel="noopener">${escapeHtml(it.link)}</a></span>
     </div>
   `;
   $('#modal').hidden = false;
@@ -2624,7 +2631,8 @@ function renderContent() {
   }
 
   if (!items.length) {
-    c.innerHTML = prefix + `<div class="empty">No items yet for <b>${escapeHtml(activeTab.toUpperCase())}</b>. Hit ↻ or wait for the next cron tick.</div>`;
+    const tl = I18N[getCurrentLang()] || I18N.en;
+    c.innerHTML = prefix + `<div class="empty">${tl.emptyFeed} <b>${escapeHtml(activeTab.toUpperCase())}</b>${tl.emptyFeedSuffix}</div>`;
     return;
   }
 
@@ -2635,11 +2643,39 @@ function renderContent() {
 }
 
 function renderItem(it) {
+  const isAr = getCurrentLang() === 'ar';
   const tagsHtml = (it.tags || []).map((t) => `<span class="tag tag-${t}">${t}</span>`).join('');
   const region = it.region ? `<span class="region">${escapeHtml(it.region)}</span>` : '';
-  const orig = it.originalTitle
-    ? `<div class="orig" dir="rtl" lang="ar">${escapeHtml(it.originalTitle)}</div>`
-    : '';
+
+  // Determine which title to display and whether to show a secondary line.
+  // AR mode:
+  //   - Arabic-source items (lang=ar): already in Arabic — show originalTitle as
+  //     the primary headline and the translated-English title as the dim secondary.
+  //   - English-source items with arTitle: show arTitle as primary, original EN as dim secondary.
+  //   - English-source items without arTitle yet: show EN title (translation pending).
+  // EN mode: show title as primary; if originalTitle exists show it as dim secondary.
+  let displayTitle, origHtml;
+  if (isAr) {
+    if (it.lang === 'ar' && it.originalTitle) {
+      // Arabic source — show original Arabic as headline, EN translation below
+      displayTitle = it.originalTitle;
+      origHtml = `<div class="orig">${escapeHtml(it.title)}</div>`;
+    } else if (it.arTitle) {
+      // English source with translation ready
+      displayTitle = it.arTitle;
+      origHtml = `<div class="orig">${escapeHtml(it.title)}</div>`;
+    } else {
+      // Translation not yet available — show English headline
+      displayTitle = it.title;
+      origHtml = '';
+    }
+  } else {
+    displayTitle = it.title;
+    origHtml = it.originalTitle
+      ? `<div class="orig" dir="rtl" lang="ar">${escapeHtml(it.originalTitle)}</div>`
+      : '';
+  }
+
   const dateIso = it.date instanceof Date ? it.date.toISOString() : new Date(it.date).toISOString();
   return `
     <article class="item" data-link="${escapeHtml(it.link)}" data-title="${escapeHtml(it.title)}" data-source="${escapeHtml(it.source || '')}" data-time="${dateIso}">
@@ -2649,8 +2685,8 @@ function renderItem(it) {
         <span class="src">${escapeHtml(it.source || '')}</span>
         ${region}
       </div>
-      <a class="title" href="${escapeHtml(it.link)}" target="_blank" rel="noopener">${escapeHtml(it.title)}</a>
-      ${orig}
+      <a class="title" href="${escapeHtml(it.link)}" target="_blank" rel="noopener">${escapeHtml(displayTitle)}</a>
+      ${origHtml}
       <div class="tag-row">${tagsHtml}</div>
     </article>
   `;
@@ -2743,29 +2779,31 @@ function renderMarketsView() {
     return card(lbl, v.usd, null, '$', v.usd_24h_change ?? null);
   }).join('') || `<div class="mcard"><div class="ml">CRYPTO</div><div class="mv">—</div></div>`;
 
+  const mt = (I18N[getCurrentLang()] || I18N.en).markets;
   return `
-    <div class="section-head">ENERGY <span class="sub">Stooq · futures</span></div>
+    <div class="section-head">${mt.energy} <span class="sub">${mt.futuresSub}</span></div>
     <div class="mgrid">${energy}</div>
 
-    <div class="section-head">METALS <span class="sub">Stooq · futures</span></div>
+    <div class="section-head">${mt.metals} <span class="sub">${mt.futuresSub}</span></div>
     <div class="mgrid">${metals}</div>
 
-    <div class="section-head">INDICES &amp; DXY <span class="sub">Stooq</span></div>
+    <div class="section-head">${mt.indices} <span class="sub">${mt.stooqSub}</span></div>
     <div class="mgrid">${indices}</div>
 
-    <div class="section-head">FX vs USD <span class="sub">Frankfurter · ECB ref</span></div>
+    <div class="section-head">${mt.fx} <span class="sub">${mt.fxSub}</span></div>
     <div class="mgrid">${fx}</div>
 
-    <div class="section-head">CRYPTO <span class="sub">CoinGecko · 24h</span></div>
+    <div class="section-head">${mt.crypto} <span class="sub">${mt.cryptoSub}</span></div>
     <div class="mgrid">${crypto}</div>
   `;
 }
 
 function renderTensionsView() {
+  const tl = I18N[getCurrentLang()] || I18N.en;
   if (!state.tensions.length) {
-    return `<div class="empty">GDELT 2.0 returned no rows in last 24h, or rate-limited. Retry shortly.</div>`;
+    return `<div class="empty">${tl.tensionsEmpty}</div>`;
   }
-  const head = `<div class="section-head">GDELT 2.0 TENSION FEED <span class="sub">last 24h · auto-translated · conflict-tagged</span></div>`;
+  const head = `<div class="section-head">${tl.tensionsHead} <span class="sub">${tl.tensionsSub}</span></div>`;
   const body = state.tensions.slice(0, 80).map((t) => {
     const code = langToCode(t.language);
     const rtl = ['ar','he','fa','ur'].includes(code || '');
@@ -2870,12 +2908,14 @@ function bindAddSourceForm() {
 }
 
 function renderSourcesView() {
+  const tl = I18N[getCurrentLang()] || I18N.en;
+  const sl = tl.sources;
   const builtin = SOURCES.map((s) => {
     const st = state.sourceStatus[s.id] || { status: 'wait', count: 0 };
     return `
       <div class="src-row">
         <span class="sname">${escapeHtml(s.name)} <span style="color:var(--dim2);font-size:10px">${escapeHtml(s.region)} · ${s.lang}</span></span>
-        <span class="scount">${st.count} items</span>
+        <span class="scount">${st.count} ${sl.items}</span>
         <span class="sstatus ${st.status}">${st.status.toUpperCase()}</span>
       </div>
     `;
@@ -2885,9 +2925,9 @@ function renderSourcesView() {
     return `
       <div class="src-row">
         <span class="sname">${escapeHtml(s.name)} <span style="color:var(--dim2);font-size:10px">${escapeHtml(s.region)} · custom</span></span>
-        <span class="scount">${st.count} items</span>
+        <span class="scount">${st.count} ${sl.items}</span>
         <span class="sstatus ${st.status}">${st.status.toUpperCase()}</span>
-        <button class="sremove" data-id="${escapeHtml(s.id)}" style="margin-left:6px">REMOVE</button>
+        <button class="sremove" data-id="${escapeHtml(s.id)}" style="margin-left:6px">${sl.removeBtn}</button>
       </div>
     `;
   }).join('');
@@ -2896,28 +2936,28 @@ function renderSourcesView() {
   const html = `
     <div class="src-controls">
       <div class="src-ctrl-row">
-        <span class="src-ctrl-label">▮ NEXT SCRAPE</span>
+        <span class="src-ctrl-label">${sl.nextScrape}</span>
         <span id="src-countdown" class="src-countdown">—</span>
-        <button class="src-scrape" id="src-scrape-now">⟳ SCRAPE NOW</button>
+        <button class="src-scrape" id="src-scrape-now">${sl.scrapeNow}</button>
       </div>
       <div class="src-ctrl-row">
-        <span class="src-ctrl-label">▮ ITEMS / SOURCE</span>
+        <span class="src-ctrl-label">${sl.itemsPerSrc}</span>
         <input id="src-items-slider" type="range" min="5" max="100" step="5" value="${itemsCap}" />
         <span id="src-items-value" class="src-items-value">${itemsCap}</span>
       </div>
     </div>
 
     <form class="add-source" id="add-source-form" autocomplete="off">
-      <input type="text" name="name" placeholder="Name (optional)" />
-      <input type="url"  name="url"  placeholder="RSS URL — or any site URL, we auto-detect" required />
-      <button type="submit">+ ADD &amp; SCRAPE</button>
-      <div class="add-hint">▸ Try a regional blog, a Substack RSS, or a news site. We probe the URL, fall back to discovering &lt;link rel="alternate" type="application/rss+xml"&gt; if it's not RSS itself, fetch immediately, and store the source in localStorage.</div>
+      <input type="text" name="name" placeholder="${sl.namePlaceholder}" />
+      <input type="url"  name="url"  placeholder="${sl.urlPlaceholder}" required />
+      <button type="submit">${sl.addSource}</button>
+      <div class="add-hint">${sl.addHint}</div>
     </form>
-    <div class="section-head">YOUR SOURCES <span class="sub">${CUSTOM_SOURCES.length} custom</span></div>
-    <div class="src-grid" id="user-sources">${custom || '<div class="empty">No custom sources yet — add one above.</div>'}</div>
-    <div class="section-head">BUILT-IN SOURCES <span class="sub">credible regional outlets</span></div>
+    <div class="section-head">${sl.yourSources} <span class="sub">${CUSTOM_SOURCES.length} custom</span></div>
+    <div class="src-grid" id="user-sources">${custom || `<div class="empty">${sl.noCustom}</div>`}</div>
+    <div class="section-head">${sl.builtIn} <span class="sub">${sl.builtInSub}</span></div>
     <div class="src-grid">${rows}</div>
-    <div class="section-head">DATA ENDPOINTS</div>
+    <div class="section-head">${sl.dataEndpoints}</div>
     <div class="src-grid">
       <div class="src-row"><span class="sname">Yahoo Finance / Stooq fallback (commodities · indices · DXY)</span><span class="scount">${Object.keys(state.markets).length}/${STOOQ_TICKERS.length}</span><span class="sstatus ${Object.keys(state.markets).length ? 'ok' : 'err'}">${Object.keys(state.markets).length ? 'OK' : 'ERR'}</span></div>
       <div class="src-row"><span class="sname">OilPriceAPI (spot · server-side proxy /api/oil)</span><span class="scount">${state.oilApiStatus === 'ok' ? 'live' : state.oilApiStatus === 'no-key' ? 'no key' : (state.oilApiStatus || 'wait')}</span><span class="sstatus ${state.oilApiStatus === 'ok' ? 'ok' : state.oilApiStatus === 'no-key' ? 'wait' : 'err'}">${state.oilApiStatus === 'ok' ? 'OK' : state.oilApiStatus === 'no-key' ? 'SET ENV' : (state.oilApiStatus || 'WAIT').toUpperCase()}</span></div>
@@ -2954,11 +2994,12 @@ function bindSourceControls() {
   const btn = document.getElementById('src-scrape-now');
   if (btn) {
     btn.addEventListener('click', () => {
+      const sl = (I18N[getCurrentLang()] || I18N.en).sources;
       btn.disabled = true;
-      btn.textContent = '⟳ SCRAPING…';
+      btn.textContent = sl.scraping;
       refresh().finally(() => {
         btn.disabled = false;
-        btn.textContent = '⟳ SCRAPE NOW';
+        btn.textContent = sl.scrapeNow;
       });
     });
   }
@@ -2991,12 +3032,13 @@ function updateFooter() {
 function updateRefreshCountdown() {
   const el = $('#next-update');
   if (!el) return;
-  if (!state.nextRefreshAt) { el.textContent = 'next in —'; return; }
+  const tl = I18N[getCurrentLang()] || I18N.en;
+  if (!state.nextRefreshAt) { el.textContent = `${tl.nextUpdate} —`; return; }
   const remaining = Math.max(0, state.nextRefreshAt - Date.now());
-  if (remaining <= 0) { el.textContent = 'next: imminent'; return; }
+  if (remaining <= 0) { el.textContent = tl.nextImminent; return; }
   const mins = Math.floor(remaining / 60000);
   const secs = Math.floor((remaining % 60000) / 1000);
-  el.textContent = `next in ${mins}m ${String(secs).padStart(2,'0')}s`;
+  el.textContent = `${tl.nextUpdate} ${mins}m ${String(secs).padStart(2,'0')}s`;
 }
 
 let refreshing = false;
@@ -3011,6 +3053,7 @@ async function refresh() {
       renderContent();
       renderBanner();
       updateFooter();
+      translateHeadlinesToAr().catch(() => {});
     }),
     fetchMarkets().then(renderTicker),
     fetchOilPriceAPI(),
@@ -3186,6 +3229,8 @@ function preload() {
       renderBanner();
       renderThreatWatch();
       updateFooter();
+      // Translate headlines if user already has AR mode active
+      translateHeadlinesToAr().catch(() => {});
     }),
     tracked(() => fetchMarkets().then(renderTicker)),
     tracked(fetchOilPriceAPI),
@@ -3276,6 +3321,109 @@ function bootSequence() {
  * THEME (light / dark) and LANG (en / ar) toggles
  * ============================================================ */
 
+/* ============================================================
+ * AR HEADLINE TRANSLATION
+ *
+ * When the user switches to Arabic mode, English headlines are
+ * translated via the /api/translate serverless endpoint (which
+ * wraps Microsoft Translator and keeps the API key server-side).
+ *
+ * To enable: add these env vars to your Vercel project, or to a
+ * local .env file (for `vercel dev`):
+ *
+ *   MS_TRANSLATOR_KEY    — your Azure Cognitive Services key
+ *   MS_TRANSLATOR_REGION — Azure region, e.g. "uaenorth" or "global"
+ *
+ * Without the env vars the endpoint returns a 503 and we fall back
+ * to showing original English headlines — no errors shown to users.
+ *
+ * Translated titles are cached in localStorage so each unique headline
+ * is only ever sent to the API once, even across page reloads.
+ * ============================================================ */
+const AR_TITLE_CACHE_KEY = 'shift:ar-title-cache';
+let arTitleCache = {};
+try { arTitleCache = JSON.parse(localStorage.getItem(AR_TITLE_CACHE_KEY) || '{}'); } catch {}
+
+function saveArTitleCache() {
+  try { localStorage.setItem(AR_TITLE_CACHE_KEY, JSON.stringify(arTitleCache)); } catch {}
+}
+
+/** Apply already-cached Arabic titles to state.items without any network call. */
+function applyArCacheToItems() {
+  let changed = false;
+  for (const it of state.items) {
+    if (!it.arTitle && it.lang !== 'ar' && arTitleCache[it.title]) {
+      it.arTitle = arTitleCache[it.title];
+      changed = true;
+    }
+  }
+  return changed;
+}
+
+let arTranslating = false;
+
+/**
+ * Batch-translate all English-source headlines to Arabic.
+ * - Skips items that already have arTitle or are from Arabic sources.
+ * - Applies cached translations instantly; fetches uncached ones in
+ *   batches of 50 from /api/translate.
+ * - Re-renders after each batch so titles update progressively.
+ * - If the server returns a 503 (no API key configured), silently
+ *   stops — users see original English headlines instead.
+ */
+async function translateHeadlinesToAr() {
+  if (getCurrentLang() !== 'ar') return;
+  if (arTranslating) return;
+
+  // 1. Apply cached translations first (zero network, instant)
+  if (applyArCacheToItems()) renderContent();
+
+  // 2. Find items still needing translation
+  const toTranslate = state.items.filter(
+    (it) => !it.arTitle && it.lang !== 'ar'
+  );
+  if (!toTranslate.length) return;
+
+  arTranslating = true;
+  try {
+    for (let i = 0; i < toTranslate.length; i += 50) {
+      if (getCurrentLang() !== 'ar') break; // user switched back to EN
+      const batch = toTranslate.slice(i, i + 50);
+      try {
+        const r = await fetchTimeout('/api/translate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ texts: batch.map((it) => it.title), to: 'ar', from: 'en' }),
+        }, 15000);
+
+        if (r.status === 503) {
+          // Key not configured — stop quietly
+          console.info('[ar-translate] MS_TRANSLATOR_KEY not set; showing English headlines.');
+          break;
+        }
+        if (!r.ok) { console.warn('[ar-translate] API error', r.status); continue; }
+
+        const j = await r.json();
+        if (j.ok && Array.isArray(j.translations)) {
+          j.translations.forEach((arText, idx) => {
+            if (arText) {
+              batch[idx].arTitle = arText;
+              arTitleCache[batch[idx].title] = arText;
+            }
+          });
+          saveArTitleCache();
+          if (getCurrentLang() === 'ar') renderContent();
+        }
+      } catch (e) {
+        console.warn('[ar-translate]', e.message);
+        break;
+      }
+    }
+  } finally {
+    arTranslating = false;
+  }
+}
+
 /* Master translation map. Anything you want translated when the user toggles
  * to Arabic lives here. Keys grouped by section. */
 const I18N = {
@@ -3286,9 +3434,13 @@ const I18N = {
     searchBtn: 'SEARCH',
     footerNote: 'No AI summaries · raw headlines only',
     nextUpdate: 'next in',
+    nextImminent: 'next: imminent',
     alert: 'ALERT',
+    booting: 'Booting terminal…',
+    initialisingFeeds: 'Initialising feeds…',
     threatWatch: '▮ MoI THREAT WATCH',
     threatNote: 'last 24h · Δ vs prior 24h · GCC + region · monotonic-by-nature',
+    threatLabels: { drone: 'DRONES', ballistic: 'BAL MSL', cruise: 'CRUISE' },
     tabs: {
       all: 'ALL', security: 'SECURITY', politics: 'POLITICS', economy: 'ECONOMY',
       ai: 'AI', markets: 'MARKETS', tensions: 'TENSIONS', sources: 'SOURCES',
@@ -3302,6 +3454,68 @@ const I18N = {
       marine:   'MARINE TRAFFIC — GULF / HORMUZ / RED SEA',
       live:     'LIVE BROADCASTS — REGIONAL & GLOBAL DESKS',
     },
+    sectionSubHeads: {
+      marine:   'MarineTraffic · live AIS · click any vessel',
+      live:     'click to stream · YouTube channel live',
+    },
+    modal: {
+      open: 'OPEN AT SOURCE ↗',
+      copy: 'COPY URL',
+      next: 'NEXT',
+      prev: 'PREV',
+      close: 'CLOSE',
+      source: 'SOURCE',
+      region: 'REGION',
+      date: 'DATE',
+      url: 'URL',
+    },
+    markets: {
+      energy: 'ENERGY',
+      metals: 'METALS',
+      indices: 'INDICES &amp; DXY',
+      fx: 'FX vs USD',
+      crypto: 'CRYPTO',
+      futuresSub: 'Stooq · futures',
+      stooqSub: 'Stooq',
+      fxSub: 'Frankfurter · ECB ref',
+      cryptoSub: 'CoinGecko · 24h',
+    },
+    tensionsHead: 'GDELT 2.0 TENSION FEED',
+    tensionsSub: 'last 24h · auto-translated · conflict-tagged',
+    tensionsEmpty: 'GDELT 2.0 returned no rows in last 24h, or rate-limited. Retry shortly.',
+    sources: {
+      nextScrape:      '▮ NEXT SCRAPE',
+      itemsPerSrc:     '▮ ITEMS / SOURCE',
+      scrapeNow:       '⟳ SCRAPE NOW',
+      scraping:        '⟳ SCRAPING…',
+      yourSources:     'YOUR SOURCES',
+      builtIn:         'BUILT-IN SOURCES',
+      builtInSub:      'credible regional outlets',
+      dataEndpoints:   'DATA ENDPOINTS',
+      addSource:       '+ ADD &amp; SCRAPE',
+      namePlaceholder: 'Name (optional)',
+      urlPlaceholder:  'RSS URL — or any site URL, we auto-detect',
+      noCustom:        'No custom sources yet — add one above.',
+      addHint:         '▸ Try a regional blog, a Substack RSS, or a news site. We probe the URL, fall back to discovering &lt;link rel="alternate" type="application/rss+xml"&gt; if it\'s not RSS itself, fetch immediately, and store the source in localStorage.',
+      removeBtn:       'REMOVE',
+      items:           'items',
+    },
+    search: {
+      cached:    'CACHED FEED MATCHES',
+      gdelt:     'GDELT 2.0 — LIVE WEB QUERY · 2 DAYS',
+      noCache:   'No cached matches.',
+      fetching:  'Fetching GDELT…',
+      retrieval: 'RETRIEVAL ONLY · NO LLM SUMMARY',
+      cachedSub: 'cached',
+      gdeltSub:  'GDELT',
+      srcSub:    'sources',
+    },
+    emptyFeed:       'No items yet for',
+    emptyFeedSuffix: '. Hit ↻ or wait for the next cron tick.',
+    mapLegend: { hiAlt: '▲ HI ALT', mid: '▲ MID', low: '▲ LOW', choke: '◆ CHOKEPOINT' },
+    ticker: { oil: '◀ OIL', fx: 'CRYPTO ▶' },
+    muted:     'MUTED · CLICK FOR AUDIO',
+    helpTitle: 'KEYBOARD SHORTCUTS',
   },
   ar: {
     tagline: 'منصة الاستخبارات الإقليمية',
@@ -3309,10 +3523,14 @@ const I18N = {
     searchPlaceholder: 'بحث · هرمز · النفط · العقوبات · إيران · الحوثي · الإمارات…',
     searchBtn: 'بحث',
     footerNote: 'بدون ملخصات ذكاء اصطناعي · عناوين خام فقط',
-    nextUpdate: 'التحديث القادم خلال',
+    nextUpdate: 'التحديث خلال',
+    nextImminent: 'وشيك',
     alert: 'تنبيه',
+    booting: 'جارٍ تشغيل المنصة…',
+    initialisingFeeds: 'جارٍ تهيئة المصادر…',
     threatWatch: '▮ مرصد التهديدات',
     threatNote: 'آخر 24 ساعة · مقارنة بالـ 24 ساعة السابقة · الخليج والمنطقة',
+    threatLabels: { drone: 'طائرات مسيّرة', ballistic: 'صواريخ باليستية', cruise: 'صواريخ كروز' },
     tabs: {
       all: 'الكل', security: 'الأمن', politics: 'السياسة', economy: 'الاقتصاد',
       ai: 'ذكاء اصطناعي', markets: 'الأسواق', tensions: 'التوترات', sources: 'المصادر',
@@ -3327,8 +3545,75 @@ const I18N = {
       marine:   'الحركة البحرية — الخليج / هرمز / البحر الأحمر',
       live:     'البث المباشر — الإقليمي والعالمي',
     },
+    sectionSubHeads: {
+      marine:   'MarineTraffic · AIS مباشر · انقر على أي سفينة',
+      live:     'انقر للبث · قناة يوتيوب مباشرة',
+    },
+    modal: {
+      open:   'فتح المصدر ↗',
+      copy:   'نسخ الرابط',
+      next:   'التالي',
+      prev:   'السابق',
+      close:  'إغلاق',
+      source: 'المصدر',
+      region: 'المنطقة',
+      date:   'التاريخ',
+      url:    'الرابط',
+    },
+    markets: {
+      energy:     'الطاقة',
+      metals:     'المعادن',
+      indices:    'المؤشرات والدولار',
+      fx:         'الصرف مقابل الدولار',
+      crypto:     'العملات الرقمية',
+      futuresSub: 'Stooq · عقود آجلة',
+      stooqSub:   'Stooq',
+      fxSub:      'Frankfurter · مرجع البنك المركزي الأوروبي',
+      cryptoSub:  'CoinGecko · 24 ساعة',
+    },
+    tensionsHead:  'مصدر توترات GDELT 2.0',
+    tensionsSub:   'آخر 24 ساعة · مترجم تلقائيًا · موسوم بالنزاعات',
+    tensionsEmpty: 'لم تُرجع GDELT 2.0 نتائج خلال الـ 24 ساعة الماضية، أو يوجد تقييد. أعد المحاولة.',
+    sources: {
+      nextScrape:      '▮ الجلب القادم',
+      itemsPerSrc:     '▮ عناصر / مصدر',
+      scrapeNow:       '⟳ جلب الآن',
+      scraping:        '⟳ جارٍ الجلب…',
+      yourSources:     'مصادرك',
+      builtIn:         'المصادر المدمجة',
+      builtInSub:      'منافذ إعلامية إقليمية موثوقة',
+      dataEndpoints:   'نقاط البيانات',
+      addSource:       '+ إضافة وجلب',
+      namePlaceholder: 'الاسم (اختياري)',
+      urlPlaceholder:  'رابط RSS — أو أي موقع، سنكشف التغذية تلقائياً',
+      noCustom:        'لا مصادر مخصصة بعد — أضف واحداً أعلاه.',
+      addHint:         '▸ جرّب مدونة إقليمية أو RSS من Substack أو موقعاً إخبارياً. سنختبر الرابط ونجلب المحتوى فوراً.',
+      removeBtn:       'حذف',
+      items:           'عناصر',
+    },
+    search: {
+      cached:    'نتائج من الذاكرة المحلية',
+      gdelt:     'GDELT 2.0 — بحث مباشر · يومان',
+      noCache:   'لا نتائج في الذاكرة.',
+      fetching:  'جارٍ جلب GDELT…',
+      retrieval: 'استرجاع فقط · بدون ملخص ذكاء اصطناعي',
+      cachedSub: 'مخزّن',
+      gdeltSub:  'GDELT',
+      srcSub:    'مصادر',
+    },
+    emptyFeed:       'لا عناصر بعد لـ',
+    emptyFeedSuffix: '. اضغط ↻ أو انتظر الدورة القادمة.',
+    mapLegend: { hiAlt: '▲ ارتفاع عالٍ', mid: '▲ متوسط', low: '▲ منخفض', choke: '◆ نقطة اختناق' },
+    ticker: { oil: '◀ النفط', fx: 'كريبتو ▶' },
+    muted:     'مكتوم · انقر للصوت',
+    helpTitle: 'اختصارات لوحة المفاتيح',
   },
 };
+
+/** Returns the currently-active UI language ('ar' or 'en'). */
+function getCurrentLang() {
+  return document.documentElement.getAttribute('lang') === 'ar' ? 'ar' : 'en';
+}
 
 function applyI18n(lang) {
   const t = I18N[lang] || I18N.en;
@@ -3365,7 +3650,14 @@ function applyI18n(lang) {
   if (tw) tw.textContent = t.threatWatch;
   const twSub = document.querySelector('.tw-sub');
   if (twSub) twSub.textContent = t.threatNote;
-  // Section heads (use data-i18n attribute we add in HTML)
+  // Threat cell labels (DRONES / BAL MSL / CRUISE)
+  const twDroneLabel = document.querySelector('#tw-drone')?.closest('.tw-cell')?.querySelector('b');
+  if (twDroneLabel) twDroneLabel.textContent = t.threatLabels.drone;
+  const twBalLabel = document.querySelector('#tw-ballistic')?.closest('.tw-cell')?.querySelector('b');
+  if (twBalLabel) twBalLabel.textContent = t.threatLabels.ballistic;
+  const twCruLabel = document.querySelector('#tw-cruise')?.closest('.tw-cell')?.querySelector('b');
+  if (twCruLabel) twCruLabel.textContent = t.threatLabels.cruise;
+  // Section heads (use data-i18n-section attribute on elements)
   document.querySelectorAll('[data-i18n-section]').forEach((el) => {
     const k = el.dataset.i18nSection;
     if (t.sectionHeads[k]) {
@@ -3374,12 +3666,49 @@ function applyI18n(lang) {
       el.firstChild && (el.firstChild.nodeValue = ' ' + t.sectionHeads[k] + ' ');
       if (sub) el.appendChild(sub);
     }
+    // Translate .sub text for marine and live sections (not dynamic count elements)
+    if (t.sectionSubHeads?.[k]) {
+      const sub = el.querySelector('.sub:not([id])'); // avoid touching count spans
+      if (sub) sub.textContent = t.sectionSubHeads[k];
+    }
   });
+  // Modal buttons
+  const modalOpen = document.getElementById('modal-open');
+  if (modalOpen) modalOpen.innerHTML = `${t.modal.open}  <kbd>O</kbd>`;
+  const modalCopy = document.getElementById('modal-copy');
+  if (modalCopy) modalCopy.innerHTML = `${t.modal.copy}  <kbd>C</kbd>`;
+  const modalNext = document.getElementById('modal-next');
+  if (modalNext) modalNext.innerHTML = `${t.modal.next}  <kbd>J</kbd>`;
+  const modalPrev = document.getElementById('modal-prev');
+  if (modalPrev) modalPrev.innerHTML = `${t.modal.prev}  <kbd>K</kbd>`;
+  const modalDismiss = document.getElementById('modal-dismiss');
+  if (modalDismiss) modalDismiss.innerHTML = `${t.modal.close}  <kbd>ESC</kbd>`;
+  // Help overlay title (preserve the close button child)
+  const helpHead = document.querySelector('.help-head');
+  if (helpHead) {
+    const closeBtn = helpHead.querySelector('#help-close');
+    helpHead.textContent = t.helpTitle;
+    if (closeBtn) helpHead.appendChild(closeBtn);
+  }
+  // Map legend labels
+  document.querySelectorAll('.map-legend .leg').forEach((el) => {
+    if (el.classList.contains('leg-hi'))    el.textContent = t.mapLegend.hiAlt;
+    else if (el.classList.contains('leg-mid'))   el.textContent = t.mapLegend.mid;
+    else if (el.classList.contains('leg-lo'))    el.textContent = t.mapLegend.low;
+    else if (el.classList.contains('leg-choke')) el.textContent = t.mapLegend.choke;
+  });
+  // Ticker lane labels
+  const oilLabel = document.querySelector('.lane-oil .lane-label');
+  if (oilLabel) oilLabel.textContent = t.ticker.oil;
+  const fxLabel = document.querySelector('.lane-fx .lane-label');
+  if (fxLabel) fxLabel.textContent = t.ticker.fx;
   // Footer note
   const fn = document.querySelector('.footer .footer-note') ||
              Array.from(document.querySelectorAll('.footer span')).find((s) =>
                /No AI summaries|بدون ملخصات/.test(s.textContent));
   if (fn) fn.textContent = t.footerNote;
+  // Re-render dynamic views so their text updates immediately
+  if (typeof renderContent === 'function' && !state?.searchActive) renderContent();
 }
 function getCurrentTheme() {
   const t = document.documentElement.getAttribute('data-theme');
@@ -3401,8 +3730,10 @@ function setLang(lang) {
   try { localStorage.setItem('shift:lang', lang); } catch (e) {}
   const btn = document.getElementById('lang-toggle');
   if (btn) btn.textContent = lang === 'ar' ? 'AR' : 'EN';
-  // Translate the visible UI
+  // Translate the visible UI strings
   try { applyI18n(lang); } catch (e) { console.warn('[i18n]', e.message); }
+  // When switching to Arabic, kick off headline translation (async, no-op if no key)
+  if (lang === 'ar') translateHeadlinesToAr().catch(() => {});
 }
 function bindThemeAndLang() {
   // Initialize button labels to reflect what the pre-paint script applied
