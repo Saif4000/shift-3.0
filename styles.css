@@ -94,6 +94,56 @@
   font-weight: 600;
 }
 
+/* ── Arabic mode: override --mono font on body and all UI text elements ──
+ * Many elements explicitly set font-family: var(--mono) which breaks
+ * inheritance from html[lang="ar"]. We override them here so every label,
+ * headline, button, and meta-text renders in SF Arabic / Geeza Pro.
+ * Ticker lanes and market numbers keep --mono (they're excluded). */
+html[lang="ar"] body,
+html[lang="ar"] button,
+html[lang="ar"] input,
+html[lang="ar"] .item,
+html[lang="ar"] .title,
+html[lang="ar"] .src,
+html[lang="ar"] .time,
+html[lang="ar"] .ago,
+html[lang="ar"] .region,
+html[lang="ar"] .tag,
+html[lang="ar"] .orig,
+html[lang="ar"] .tab,
+html[lang="ar"] .subtab,
+html[lang="ar"] .tagline,
+html[lang="ar"] .empty,
+html[lang="ar"] .footer,
+html[lang="ar"] .footer-note,
+html[lang="ar"] .modal-body,
+html[lang="ar"] .modal-title,
+html[lang="ar"] .modal-source,
+html[lang="ar"] .modal-meta,
+html[lang="ar"] #modal-open,
+html[lang="ar"] #modal-copy,
+html[lang="ar"] #modal-next,
+html[lang="ar"] #modal-prev,
+html[lang="ar"] #modal-dismiss,
+html[lang="ar"] .lt-name,
+html[lang="ar"] .lt-reg,
+html[lang="ar"] .lt-stub-name,
+html[lang="ar"] .lt-stub-cta,
+html[lang="ar"] .banner-tag,
+html[lang="ar"] .tw-tag,
+html[lang="ar"] .tw-sub,
+html[lang="ar"] .src-row,
+html[lang="ar"] .sname,
+html[lang="ar"] .header-brand,
+html[lang="ar"] .help-head,
+html[lang="ar"] .help-overlay kbd,
+html[lang="ar"] .section-head,
+html[lang="ar"] .preset,
+html[lang="ar"] .mode-btn {
+  font-family: var(--arabic);
+  letter-spacing: 0;
+}
+
 /* universal [hidden] enforcement — must beat author display: rules */
 [hidden] { display: none !important; }
 

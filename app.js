@@ -353,24 +353,19 @@ const CHOKEPOINTS = [
   { code: 'GIB',  name: 'GIBRALTAR',        lat: 35.967, lon: -5.483, rings_nm: [50] },
 ];
 
-/* YouTube live channels — embed via /embed/live_stream?channel=ID
- * Each channel's live stream is embedded directly; if it isn't live at a
- * given moment YouTube returns its standard "no current live stream" tile. */
-/**
- * LIVE roster — user-curated. Uses channel-live-stream embed URLs (not
- * hardcoded video IDs) because the IDs rotate every few months and break the
- * embed. The channel URL always picks up whatever the channel is currently
- * streaming live.
+/* YouTube live channels.
+ * Prefer videoId (direct embed — always works, no "not live" errors).
+ * Fall back to channelId (live_stream embed — only works when channel is live).
  */
 const LIVE_CHANNELS = [
-  // Regional Arabic live desks
-  { channelId: 'UCfiwzLy-8yKzIbsmZTzxDgw', name: 'AL JAZEERA AR',    desk: 'الدوحة · QA' },
-  { channelId: 'UCab1phyEEA0c82udQd5y61Q', name: 'SKY NEWS ARABIA',  desk: 'أبوظبي · AE' },
-  { channelId: 'UCgvfTQpcQ3O0BBaivYIJC8w', name: 'AL ARABIYA',       desk: 'الرياض · SA' },
-  { channelId: 'UCXprjKbrLmb1YuQmsEUBPTQ', name: 'AL HADATH',        desk: 'الرياض · SA' },
+  // Regional Arabic live desks — using permanent 24/7 live video IDs for reliability
+  { channelId: 'UCfiwzLy-8yKzIbsmZTzxDgw', videoId: 'hX9_ql37hiE',   name: 'AL JAZEERA AR',   desk: 'الدوحة · QA' },
+  { channelId: 'UCIJXOvggjKtCagMfxvcCzAA', videoId: 'oY976rzO-EI',   name: 'SKY NEWS ARABIA', desk: 'أبوظبي · AE' },
+  { channelId: 'UCgvfTQpcQ3O0BBaivYIJC8w', videoId: 'ZjJKPp3PF-U',   name: 'AL ARABIYA',      desk: 'الرياض · SA' },
+  { channelId: 'UCrj5BGAhtWxDfqbza9T9hqA', videoId: '0STUpSryLWY',   name: 'AL HADATH',       desk: 'الرياض · SA' },
   // English desks
   { channelId: 'UCIALMKvObZNtJ6AmdCLP7Lg', name: 'BLOOMBERG TV',     desk: 'NEW YORK · US' },
-  { channelId: 'UCNye-wNBqNL5ZzHSJj3l8Bg', name: 'AL JAZEERA EN',    desk: 'DOHA · QA' },
+  { channelId: 'UCNye-wNBqNL5ZzHSJj3l8Ng', name: 'AL JAZEERA EN',    desk: 'DOHA · QA' },
   { channelId: 'UCQfwfsi5VrQ8yKZ-UWmAEFg', name: 'FRANCE 24 EN',     desk: 'PARIS · FR' },
   { channelId: 'UCknLrEdhRCp1aegoMqRaCZg', name: 'DW NEWS',          desk: 'BERLIN · DE' },
   { channelId: 'UC7fWeaHhqgM4Ry-RMpM2YYw', name: 'TRT WORLD',        desk: 'ISTANBUL · TR' },
@@ -665,6 +660,7 @@ async function fetchAllNews() {
       if (!['map','live','markets','tensions','sources'].includes(activeTab) && !state.searchActive) {
         renderContent();
       }
+      if (getCurrentLang() === 'ar') translateHeadlinesToAr().catch(() => {});
       renderBanner();
       renderThreatWatch();
       updateFooter();
@@ -2162,16 +2158,19 @@ function renderLive() {
   if (grid.dataset.rendered) return;
   const origin = encodeURIComponent(location.origin);
 
-  // channel-live-stream URL — auto-picks the channel's CURRENT live broadcast.
-  // Avoids stale hardcoded video IDs that rotate every few months.
-  const embedUrl = (channelId) =>
-    `https://www.youtube-nocookie.com/embed/live_stream?channel=${channelId}` +
-    `&autoplay=1&mute=1&playsinline=1&controls=1&enablejsapi=1&rel=0&modestbranding=1&origin=${origin}`;
+  // Prefer direct video embed (videoId) — works even when channel isn't "live".
+  // Fall back to channel live_stream embed when no videoId is set.
+  const embedUrl = (ch) => {
+    const base = ch.videoId
+      ? `https://www.youtube-nocookie.com/embed/${ch.videoId}`
+      : `https://www.youtube-nocookie.com/embed/live_stream?channel=${ch.channelId}`;
+    return base + `?autoplay=1&mute=1&playsinline=1&controls=1&enablejsapi=1&rel=0&modestbranding=1&origin=${origin}`;
+  };
 
   grid.innerHTML = LIVE_CHANNELS.map((ch, i) => {
     const liveNow = i < LIVE_AUTO_LOAD;
     const body = liveNow
-      ? `<iframe src="${embedUrl(ch.channelId)}"
+      ? `<iframe src="${embedUrl(ch)}"
                  allow="autoplay; encrypted-media; picture-in-picture"
                  allowfullscreen loading="lazy"></iframe>
          <div class="lt-mute-overlay">MUTED · CLICK FOR AUDIO</div>`
@@ -2181,7 +2180,8 @@ function renderLive() {
          </div>`;
     return `
       <div class="live-tile"
-           data-channel="${ch.channelId}"
+           data-channel="${ch.channelId || ''}"
+           data-videoid="${ch.videoId || ''}"
            data-muted="1"
            data-loaded="${liveNow ? '1' : '0'}">
         <div class="lt-head">
@@ -2223,10 +2223,10 @@ function renderLive() {
     }
   };
   const loadTile = (tile) => {
-    const channelId = tile.dataset.channel;
+    const ch = { channelId: tile.dataset.channel, videoId: tile.dataset.videoid };
     const frame = tile.querySelector('.lt-frame');
     frame.innerHTML =
-      `<iframe src="${embedUrl(channelId)}"
+      `<iframe src="${embedUrl(ch)}"
                allow="autoplay; encrypted-media; picture-in-picture"
                allowfullscreen></iframe>
        <div class="lt-mute-overlay">${(I18N[getCurrentLang()] || I18N.en).muted}</div>`;
@@ -2872,6 +2872,7 @@ async function tryAddCustomSource(name, rawUrl, region) {
     state.items = mergeAndDedupe([...items, ...state.items]);
     cacheSet('news', state.items.slice(0, 200));
     renderContent(); renderBanner(); renderSourcesView();
+    if (getCurrentLang() === 'ar') translateHeadlinesToAr().catch(() => {});
     toast(`+ ${items.length} items from ${displayName}`);
   } catch (e) {
     toast(`Fetch failed: ${e.message}`);
@@ -3393,7 +3394,9 @@ async function translateHeadlinesToAr() {
         const r = await fetchTimeout('/api/translate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ texts: batch.map((it) => it.title), to: 'ar', from: 'en' }),
+          // Omit 'from' — let Microsoft auto-detect source language.
+          // This handles Hebrew, French, and other non-English feeds correctly.
+          body: JSON.stringify({ texts: batch.map((it) => it.title), to: 'ar' }),
         }, 15000);
 
         if (r.status === 503) {
@@ -3421,6 +3424,11 @@ async function translateHeadlinesToAr() {
     }
   } finally {
     arTranslating = false;
+    // After finishing, check if new items arrived during translation and re-run if so.
+    const remaining = state.items.filter((it) => !it.arTitle && it.lang !== 'ar');
+    if (remaining.length && getCurrentLang() === 'ar') {
+      setTimeout(() => translateHeadlinesToAr().catch(() => {}), 500);
+    }
   }
 }
 
