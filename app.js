@@ -3364,13 +3364,36 @@ function applyArCacheToItems() {
 let arTranslating = false;
 
 /**
- * Batch-translate all English-source headlines to Arabic.
- * - Skips items that already have arTitle or are from Arabic sources.
- * - Applies cached translations instantly; fetches uncached ones in
- *   batches of 50 from /api/translate.
- * - Re-renders after each batch so titles update progressively.
- * - If the server returns a 503 (no API key configured), silently
- *   stops — users see original English headlines instead.
+ * Free Google Translate fallback — no API key needed.
+ * Joins up to 15 headlines with double-newline, sends one request,
+ * then splits the result back out. Results are approximate but good enough
+ * for news headlines. Used when MS_TRANSLATOR_KEY is not configured.
+ */
+async function translateBatchFree(texts, to = 'ar') {
+  const SEP = '\n\n';
+  const joined = texts.join(SEP);
+  try {
+    const url =
+      `https://translate.googleapis.com/translate_a/single?client=gtx` +
+      `&sl=auto&tl=${encodeURIComponent(to)}&dt=t&q=${encodeURIComponent(joined)}`;
+    const r = await fetch(url, { signal: AbortSignal.timeout(12000) });
+    if (!r.ok) return texts.map(() => '');
+    const data = await r.json();
+    // Reassemble all translated fragments (Google splits long text into segments)
+    const full = (data?.[0] || []).map((x) => x?.[0] || '').join('');
+    const parts = full.split(/\n\n+/);
+    return texts.map((_, i) => (parts[i] || '').trim());
+  } catch {
+    return texts.map(() => '');
+  }
+}
+
+/**
+ * Batch-translate all non-Arabic headlines to Arabic.
+ * Priority: /api/translate (MS Translator, server-side key) →
+ *           translateBatchFree (Google Translate, no key needed).
+ * Results are cached in localStorage so each headline is only ever
+ * sent to a translation API once, even across reloads.
  */
 async function translateHeadlinesToAr() {
   if (getCurrentLang() !== 'ar') return;
@@ -3386,48 +3409,66 @@ async function translateHeadlinesToAr() {
   if (!toTranslate.length) return;
 
   arTranslating = true;
+  let useFree = false; // set to true once we know MS key isn't configured
+
   try {
-    for (let i = 0; i < toTranslate.length; i += 50) {
-      if (getCurrentLang() !== 'ar') break; // user switched back to EN
-      const batch = toTranslate.slice(i, i + 50);
-      try {
-        const r = await fetchTimeout('/api/translate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          // Omit 'from' — let Microsoft auto-detect source language.
-          // This handles Hebrew, French, and other non-English feeds correctly.
-          body: JSON.stringify({ texts: batch.map((it) => it.title), to: 'ar' }),
-        }, 15000);
+    for (let i = 0; i < toTranslate.length; i += 15) {
+      if (getCurrentLang() !== 'ar') break;
+      const batch = toTranslate.slice(i, i + 15);
 
-        if (r.status === 503) {
-          // Key not configured — stop quietly
-          console.info('[ar-translate] MS_TRANSLATOR_KEY not set; showing English headlines.');
-          break;
-        }
-        if (!r.ok) { console.warn('[ar-translate] API error', r.status); continue; }
+      let translations = null;
 
-        const j = await r.json();
-        if (j.ok && Array.isArray(j.translations)) {
-          j.translations.forEach((arText, idx) => {
-            if (arText) {
-              batch[idx].arTitle = arText;
-              arTitleCache[batch[idx].title] = arText;
-            }
-          });
-          saveArTitleCache();
-          if (getCurrentLang() === 'ar') renderContent();
+      // ── Try MS Translator (server-side key, batches of 15) ──────────────
+      if (!useFree) {
+        try {
+          const r = await fetchTimeout('/api/translate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ texts: batch.map((it) => it.title), to: 'ar' }),
+          }, 15000);
+
+          if (r.status === 503) {
+            // Key not configured — fall through to free API for all remaining
+            console.info('[ar-translate] MS key not set; switching to free Google Translate.');
+            useFree = true;
+          } else if (r.ok) {
+            const j = await r.json();
+            if (j.ok && Array.isArray(j.translations)) translations = j.translations;
+          }
+        } catch (e) {
+          console.warn('[ar-translate] MS error:', e.message);
+          useFree = true; // MS unreachable — use free fallback
         }
-      } catch (e) {
-        console.warn('[ar-translate]', e.message);
-        break;
+      }
+
+      // ── Free Google Translate fallback ───────────────────────────────────
+      if (useFree && !translations) {
+        translations = await translateBatchFree(batch.map((it) => it.title), 'ar');
+      }
+
+      // ── Apply results ─────────────────────────────────────────────────────
+      if (translations) {
+        translations.forEach((arText, idx) => {
+          if (arText && batch[idx]) {
+            batch[idx].arTitle = arText;
+            arTitleCache[batch[idx].title] = arText;
+          }
+        });
+        saveArTitleCache();
+        if (getCurrentLang() === 'ar') renderContent();
+      }
+
+      // Small pause between free-API calls to avoid rate limiting
+      if (useFree && i + 15 < toTranslate.length) {
+        await new Promise((res) => setTimeout(res, 300));
       }
     }
   } finally {
     arTranslating = false;
-    // After finishing, check if new items arrived during translation and re-run if so.
+    // After finishing, check if new items arrived during translation and re-run.
     const remaining = state.items.filter((it) => !it.arTitle && it.lang !== 'ar');
     if (remaining.length && getCurrentLang() === 'ar') {
-      setTimeout(() => translateHeadlinesToAr().catch(() => {}), 500);
+      setTimeout(() => translateHeadlinesToAr().catch(() => {}), 800);
     }
   }
 }
