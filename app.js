@@ -359,8 +359,8 @@ const CHOKEPOINTS = [
  */
 const LIVE_CHANNELS = [
   // Regional Arabic live desks — using permanent 24/7 live video IDs for reliability
-  { channelId: 'UCfiwzLy-8yKzIbsmZTzxDgw', videoId: 'hX9_ql37hiE',   name: 'AL JAZEERA AR',   desk: 'الدوحة · QA' },
-  { channelId: 'UCIJXOvggjKtCagMfxvcCzAA', videoId: 'oY976rzO-EI',   name: 'SKY NEWS ARABIA', desk: 'أبوظبي · AE' },
+  { channelId: 'UCz3BkhdJSP7l8CiZNG1RKeQ',                           name: 'AL JAZEERA AR',   desk: 'الدوحة · QA' },
+  { channelId: 'UCIJXOvggjKtCagMfxvcCzAA', videoId: 'ymYr5ze2XeA',   name: 'SKY NEWS ARABIA', desk: 'أبوظبي · AE' },
   { channelId: 'UCgvfTQpcQ3O0BBaivYIJC8w', videoId: 'ZjJKPp3PF-U',   name: 'AL ARABIYA',      desk: 'الرياض · SA' },
   { channelId: 'UCrj5BGAhtWxDfqbza9T9hqA', videoId: '0STUpSryLWY',   name: 'AL HADATH',       desk: 'الرياض · SA' },
   // English desks
